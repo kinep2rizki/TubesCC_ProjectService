@@ -6,7 +6,17 @@ Berikut adalah gambaran sistem *backend* (ERD dan Endpoint API) yang perlu dikem
 
 ---
 
-## 1. Entity Relationship Diagram (ERD)
+## 1. Tech Stack & Environment
+
+Berdasarkan spesifikasi, pengembangan *backend* ini harus menggunakan teknologi berikut:
+
+*   **Backend Framework (Core Framework):** Laravel 11 / 12 dengan standar PHP 8.3+.
+*   **Authentication (JWT & Session):** Kombinasi perlindungan _stateful_ dan _stateless_ menggunakan pustaka `tymon/jwt-auth` dan `Laravel Sanctum`.
+*   **Database (User & Project DB):** Mendukung fleksibilitas RDBMS relasional baik menggunakan **PostgreSQL** maupun **MySQL**.
+
+---
+
+## 2. Entity Relationship Diagram (ERD)
 
 Desain *database* inti untuk mengakomodasi seluruh fitur dari Dashboard hingga Analytics.
 
@@ -92,7 +102,7 @@ erDiagram
 
 ---
 
-## 2. Kebutuhan API & Controllers (Roadmap)
+## 3. Kebutuhan API & Controllers (Roadmap)
 
 Di bawah ini adalah daftar *Controllers* (atau API Endpoints) yang harus Anda kembangkan di Laravel untuk menghubungkan desain UI dengan *Database*.
 

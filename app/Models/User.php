@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +23,32 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'avatar_url'
     ];
+
+    /**
+     * Get the communities this user owns.
+     */
+    public function ownedCommunities()
+    {
+        return $this->hasMany(Community::class, 'owner_id');
+    }
+
+    /**
+     * Get the communities this user is a member of.
+     */
+    public function communityMemberships()
+    {
+        return $this->hasMany(CommunityMember::class);
+    }
+
+    /**
+     * Get the events this user is participating in.
+     */
+    public function participations()
+    {
+        return $this->hasMany(EventParticipant::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
