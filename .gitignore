@@ -1,0 +1,46 @@
+*.log
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+
+# Auth
+/auth.json
+
+# Dependencies
+/node_modules
+/vendor
+
+# Vite Build
+/public/build
+/public/hot
+
+# Storage
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/logs/*
+!/storage/logs/.gitignore
+
+# Laravel Cache
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore
+
+# Local Development
+Homestead.json
+Homestead.yaml
+
+# Windows
+Thumbs.db
