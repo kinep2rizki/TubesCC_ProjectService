@@ -16,6 +16,10 @@ class Event extends Model
         'end_date',
         'location',
         'status',
+        'capacity',
+        'is_qr_active',
+        'certificate_automation_active',
+        'certificate_template',
     ];
 
     public function community()

@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
+<div x-data="{ showGuidelinesModal: false }" class="flex flex-col gap-lg">
 <!-- Hero Section -->
 <section class="relative rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-container shadow-sm group">
     <div class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-700 group-hover:opacity-30" style="background-image: url('https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2070&auto=format&fit=crop');"></div>
@@ -14,16 +15,31 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Systems Operational
                 </span>
             </div>
-            <h2 class="font-display-lg-mobile lg:font-display-lg text-on-surface mb-sm">PETA</h2>
-            <p class="font-headline-sm text-headline-sm text-on-surface-variant max-w-xl">Platform Event Teknologi Aktivitas. Monitor, manage, and scale your technology events with precision.</p>
+            <h2 class="font-display-lg-mobile lg:font-display-lg text-on-surface mb-sm">{{ $activeCommunity ? $activeCommunity->name : 'PETA' }}</h2>
+            <p class="font-headline-sm text-headline-sm text-on-surface-variant max-w-xl">{{ $activeCommunity ? $activeCommunity->description : 'Platform Event Teknologi Aktivitas. Monitor, manage, and scale your technology events with precision.' }}</p>
         </div>
         <div class="flex gap-md">
             <button class="bg-primary text-on-primary font-label-caps text-label-caps px-lg py-sm rounded-lg hover:bg-primary/90 transition-colors shadow-[0_0_20px_rgba(173,198,255,0.3)] hover:shadow-[0_0_25px_rgba(173,198,255,0.5)] active:scale-95 flex items-center gap-sm">
                 <span class="material-symbols-outlined text-[18px]">add_circle</span> New Event
             </button>
-            <button class="bg-transparent border border-outline-variant text-on-surface font-label-caps text-label-caps px-lg py-sm rounded-lg hover:bg-surface-variant transition-colors active:scale-95">
-                Generate Report
+            @php
+                $canEditGuidelines = false;
+                if (auth()->user()) {
+                    if (auth()->user()->hasRole('Super Admin')) {
+                        $canEditGuidelines = true;
+                    } elseif ($activeCommunity) {
+                        $canEditGuidelines = \App\Models\CommunityMember::where('user_id', auth()->id())
+                            ->where('community_id', $activeCommunity->id)
+                            ->where('role', 'Owner')
+                            ->exists();
+                    }
+                }
+            @endphp
+            @if($canEditGuidelines)
+            <button @click="showGuidelinesModal = true" class="bg-transparent border border-outline-variant text-on-surface font-label-caps text-label-caps px-lg py-sm rounded-lg hover:bg-surface-variant transition-colors active:scale-95 flex items-center gap-sm">
+                <span class="material-symbols-outlined text-[18px]">article</span> Guidelines
             </button>
+            @endif
         </div>
     </div>
 </section>
@@ -188,5 +204,10 @@
             </div>
         </div>
     </div>
+</div>
+
+@if($activeCommunity)
+<x-community-guidelines-modal :community="$activeCommunity" />
+@endif
 </div>
 @endsection

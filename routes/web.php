@@ -15,6 +15,7 @@ use App\Http\Controllers\ProfileController;
 // ==========================================
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->name('login.post');
+Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // ==========================================
@@ -27,17 +28,25 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/', [EventController::class, 'index'])->name('dashboard');
     
     // Communities Management
+    Route::get('/switch-community/{id}', [CommunityController::class, 'switch'])->name('communities.switch');
     Route::get('/communities', [CommunityController::class, 'index'])->name('communities');
     Route::post('/communities', [CommunityController::class, 'store'])->name('communities.store');
+    Route::put('/communities/{id}', [CommunityController::class, 'update'])->name('communities.update');
+    
+    // User Management
+    Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users');
+    Route::put('/users/{id}/role', [\App\Http\Controllers\UserController::class, 'updateRole'])->name('users.updateRole');
     
     // Event Management
     Route::get('/events', [EventController::class, 'manage'])->name('events');
     Route::get('/events/{id}', [EventController::class, 'show'])->name('event-detail');
     Route::post('/events', [EventController::class, 'store'])->name('events.store');
+    Route::put('/events/{id}', [EventController::class, 'update'])->name('events.update');
     
     // Participants & Attendance
     Route::get('/events/{eventId}/participants', [ParticipantController::class, 'index'])->name('participants');
     Route::post('/events/{eventId}/participants', [ParticipantController::class, 'store'])->name('participants.store');
+    Route::get('/events/{eventId}/participants/export', [ParticipantController::class, 'export'])->name('participants.export');
     Route::get('/events/{eventId}/attendance', [AttendanceController::class, 'index'])->name('attendance');
     Route::post('/events/{eventId}/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
     

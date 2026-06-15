@@ -22,6 +22,11 @@ class AttendanceController extends Controller
 
     public function store(\Illuminate\Http\Request $request, $eventId)
     {
+        $event = \App\Models\Event::findOrFail($eventId);
+        if (!auth()->user()->canManageAttendance($event->community_id)) {
+            abort(403, 'Unauthorized to manage attendance.');
+        }
+
         $request->validate(['email' => 'required|email']);
 
         $user = \App\Models\User::where('email', $request->email)->first();

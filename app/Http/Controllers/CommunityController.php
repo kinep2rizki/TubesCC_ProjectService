@@ -8,7 +8,8 @@ class CommunityController extends Controller
 {
     public function index()
     {
-        $community = Community::with(['members.user'])->first();
+        $activeCommunityId = session('active_community_id');
+        $community = Community::with(['members.user'])->find($activeCommunityId);
         
         // Fallback if no community exists
         if (!$community) {
@@ -22,14 +23,39 @@ class CommunityController extends Controller
         return view('Pages.Community', compact('community'));
     }
 
+    public function switch($id)
+    {
+        $community = Community::findOrFail($id);
+        
+        // Ensure user is part of the community or Super Admin
+        $user = auth()->user();
+        if (!$user->hasRole('Super Admin') && !$community->members()->where('user_id', $user->id)->exists()) {
+            abort(403, 'Unauthorized');
+        }
+
+        session(['active_community_id' => $community->id]);
+        return back()->with('success', 'Switched to ' . $community->name);
+    }
+
     public function store(\Illuminate\Http\Request $request)
     {
+        if (!auth()->user()->hasRole('Super Admin')) {
+            abort(403, 'Only Super Admin can create new communities.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'password' => 'nullable|string|min:4',
         ]);
 
         $validated['owner_id'] = \Illuminate\Support\Facades\Auth::id() ?? 1;
+        
+        if (!empty($validated['password'])) {
+            $validated['password'] = \Illuminate\Support\Facades\Hash::make($validated['password']);
+        } else {
+            $validated['password'] = null;
+        }
 
         $community = Community::create($validated);
         
@@ -45,6 +71,30 @@ class CommunityController extends Controller
     public function updateRoles(Request $request, $id)
     {
         // Logic to update community roles from the Role Builder Modal
-        return back()->with('success', 'Roles updated successfully.');
+        return back()->with('success', 'Member added successfully');
+    }
+
+    public function update(\Illuminate\Http\Request $request, $id)
+    {
+        $community = Community::findOrFail($id);
+        
+        $user = auth()->user();
+        $isOwner = \App\Models\CommunityMember::where('user_id', $user->id)
+            ->where('community_id', $community->id)
+            ->where('role', 'Owner')
+            ->exists();
+
+        if (!$user->hasRole('Super Admin') && !$isOwner) {
+            abort(403, 'Only Community Owner or Super Admin can edit the community details.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $community->update($validated);
+
+        return back()->with('success', 'Community profile updated successfully.');
     }
 }

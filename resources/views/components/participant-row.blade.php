@@ -7,7 +7,8 @@
     'status',
     'date',
     'avatarUrl' => null,
-    'avatarInitials' => null
+    'avatarInitials' => null,
+    'roleColor' => 'text-on-surface-variant opacity-70'
 ])
 
 @php
@@ -58,7 +59,7 @@
             @endif
             <div class="flex flex-col">
                 <span class="font-body-sm text-body-sm font-medium text-on-surface group-hover:text-primary transition-colors">{{ $name }}</span>
-                <span class="font-label-caps text-label-caps text-on-surface-variant opacity-70">{{ $role }}</span>
+                <span class="font-label-caps text-label-caps {{ $roleColor }}">{{ $role }}</span>
             </div>
         </div>
     </td>

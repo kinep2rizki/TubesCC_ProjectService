@@ -29,9 +29,9 @@
         </div>
         <div class="mt-lg flex justify-end gap-sm border-t border-outline-variant/20 pt-md">
             <button @click="showExportModal = false" type="button" class="px-4 py-2 rounded-lg border border-outline-variant/50 text-on-surface font-body-sm hover:bg-surface-variant/50 transition-colors">Cancel</button>
-            <button @click="showExportModal = false" type="button" class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-body-sm hover:bg-primary-fixed transition-colors shadow-sm">
+            <a href="{{ route('participants.export', ['eventId' => $event->id ?? 1, 'search' => request('search'), 'status' => request('status')]) }}" @click="showExportModal = false" class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-body-sm hover:bg-primary-fixed transition-colors shadow-sm">
                 <span class="material-symbols-outlined text-[18px]">download</span> Download CSV
-            </button>
+            </a>
         </div>
     </div>
 </div>

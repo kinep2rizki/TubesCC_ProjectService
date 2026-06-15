@@ -3,12 +3,13 @@
     'name',
     'ticketType',
     'status', // granted, denied
-    'gate'
+    'gate',
+    'nameColor' => null
 ])
 
 <tr class="border-b border-outline-variant/10 hover:bg-white/5 transition-colors">
     <td class="py-sm px-md text-outline-variant">{{ $timestamp }}</td>
-    <td class="py-sm px-md font-body-sm text-body-sm {{ $status === 'denied' ? 'text-outline-variant italic' : '' }}">{{ $name }}</td>
+    <td class="py-sm px-md font-body-sm text-body-sm {{ $status === 'denied' ? 'text-outline-variant italic' : ($nameColor ?? '') }}">{{ $name }}</td>
     <td class="py-sm px-md">
         <span class="px-2 py-1 rounded {{ $status === 'denied' ? 'bg-surface-variant text-on-surface-variant' : ($ticketType === 'VIP' ? 'bg-secondary-container/20 text-primary' : 'bg-surface-variant text-on-surface-variant') }} text-xs">
             {{ $ticketType }}

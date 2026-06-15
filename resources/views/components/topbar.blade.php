@@ -1,3 +1,45 @@
+@php
+    $user = Auth::user();
+    $displayRole = 'User';
+    $bgColorHex = '4d8eff'; // Default primary blue
+    $badgeClasses = 'bg-primary/20 text-primary border-primary/30';
+    
+    if ($user) {
+        if ($user->hasRole('Super Admin')) {
+            $displayRole = 'Super Admin';
+            $bgColorHex = 'ef4444'; // red-500
+            $badgeClasses = 'bg-error/20 text-error border-error/30';
+        } else {
+            // Priority 2: Local community role
+            if (isset($activeCommunity)) {
+                $membership = $user->communityMemberships->where('community_id', $activeCommunity->id)->first();
+                if ($membership) {
+                    $localRole = ucfirst($membership->role);
+                    $displayRole = $localRole . ' (' . $activeCommunity->name . ')';
+                    if ($localRole === 'Owner') {
+                        $bgColorHex = 'ec4899'; // pink-500
+                        $badgeClasses = 'bg-pink-500/20 text-pink-500 border-pink-500/30';
+                    } elseif ($localRole === 'Admin') {
+                        $bgColorHex = 'f97316'; // orange-500
+                        $badgeClasses = 'bg-orange-500/20 text-orange-500 border-orange-500/30';
+                    } elseif ($localRole === 'Moderator') {
+                        $bgColorHex = 'f59e0b'; // amber-500
+                        $badgeClasses = 'bg-amber-500/20 text-amber-500 border-amber-500/30';
+                    } elseif ($localRole === 'Member') {
+                        $bgColorHex = '14b8a6'; // teal-500
+                        $badgeClasses = 'bg-teal-500/20 text-teal-500 border-teal-500/30';
+                    }
+                }
+            }
+            
+            // Priority 3: Other Global roles
+            if ($displayRole === 'User') {
+                // Global roles other than Super Admin have been removed.
+                // Fallback is just User.
+            }
+        }
+    }
+@endphp
 <header class="w-full sticky top-0 z-20 bg-background/70 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm flex justify-between items-center px-lg py-sm">
     <!-- Left Side: Mobile Menu Toggle & Search -->
     <div class="flex items-center gap-md">
@@ -16,7 +58,7 @@
                 <div class="w-5 h-5 rounded bg-primary/20 flex items-center justify-center text-primary">
                     <span class="material-symbols-outlined text-[14px]">groups</span>
                 </div>
-                <span class="font-label-caps text-label-caps text-on-surface ml-1">PETA Core Team</span>
+                <span class="font-label-caps text-label-caps text-on-surface ml-1">{{ $activeCommunity->name ?? 'No Community' }}</span>
                 <span class="material-symbols-outlined text-[16px] text-on-surface-variant transition-transform" :class="openCommunityMenu ? 'rotate-180' : ''">expand_more</span>
             </button>
 
@@ -26,41 +68,33 @@
                     <p class="text-[10px] font-label-caps text-on-surface-variant mb-2">YOUR COMMUNITIES</p>
                 </div>
                 
-                <!-- Active Community -->
-                <a href="#" class="flex items-center justify-between px-md py-sm bg-primary/10 hover:bg-primary/20 transition-colors group">
-                    <div class="flex items-center gap-md">
-                        <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary shadow-sm flex-shrink-0">
-                            <span class="font-bold text-xs">PC</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="font-body-sm text-body-sm text-on-surface font-bold leading-tight">PETA Core Team</span>
-                            <span class="text-[10px] text-on-surface-variant font-mono-code mt-1">24 Members</span>
-                        </div>
-                    </div>
-                    <span class="material-symbols-outlined text-primary text-[18px]">check</span>
-                </a>
-                
-                <!-- Inactive Community 1 -->
-                <a href="#" class="flex items-center gap-md px-md py-sm hover:bg-white/5 transition-colors group">
-                    <div class="w-8 h-8 rounded bg-tertiary flex items-center justify-center text-on-tertiary shadow-sm flex-shrink-0">
-                        <span class="font-bold text-xs">FD</span>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="font-body-sm text-body-sm text-on-surface font-semibold leading-tight group-hover:text-primary transition-colors">Frontend Devs ID</span>
-                        <span class="text-[10px] text-on-surface-variant font-mono-code mt-1">1,204 Members</span>
-                    </div>
-                </a>
-
-                <!-- Inactive Community 2 -->
-                <a href="#" class="flex items-center gap-md px-md py-sm hover:bg-white/5 transition-colors group">
-                    <div class="w-8 h-8 rounded bg-secondary flex items-center justify-center text-on-secondary shadow-sm flex-shrink-0">
-                        <span class="font-bold text-xs">UX</span>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="font-body-sm text-body-sm text-on-surface font-semibold leading-tight group-hover:text-primary transition-colors">UI/UX Chapter</span>
-                        <span class="text-[10px] text-on-surface-variant font-mono-code mt-1">890 Members</span>
-                    </div>
-                </a>
+                @foreach(Auth::user()->communityMemberships()->with('community')->get() as $membership)
+                    @php $community = $membership->community; @endphp
+                    @if(isset($activeCommunity) && $activeCommunity->id == $community->id)
+                        <!-- Active Community -->
+                        <a href="{{ route('communities.switch', $community->id) }}" class="flex items-center justify-between px-md py-sm bg-primary/10 hover:bg-primary/20 transition-colors group">
+                            <div class="flex items-center gap-md">
+                                <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary shadow-sm flex-shrink-0">
+                                    <span class="font-bold text-xs">{{ strtoupper(substr($community->name, 0, 2)) }}</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="font-body-sm text-body-sm text-on-surface font-bold leading-tight">{{ $community->name }}</span>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-primary text-[18px]">check</span>
+                        </a>
+                    @else
+                        <!-- Inactive Community -->
+                        <a href="{{ route('communities.switch', $community->id) }}" class="flex items-center gap-md px-md py-sm hover:bg-white/5 transition-colors group">
+                            <div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center text-on-surface shadow-sm flex-shrink-0">
+                                <span class="font-bold text-xs">{{ strtoupper(substr($community->name, 0, 2)) }}</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="font-body-sm text-body-sm text-on-surface font-semibold leading-tight group-hover:text-primary transition-colors">{{ $community->name }}</span>
+                            </div>
+                        </a>
+                    @endif
+                @endforeach
 
                 <div class="h-px w-full bg-outline-variant/30 my-2"></div>
                 
@@ -131,14 +165,19 @@
             </button>
             <div x-data="{ openAccountMenu: false }" class="relative ml-xs">
                 <button @click="openAccountMenu = !openAccountMenu" @click.outside="openAccountMenu = false" class="rounded-full overflow-hidden border border-outline-variant/50 hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background flex items-center justify-center">
-                    <img alt="User profile" class="w-8 h-8 object-cover" src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name ?? 'User') }}&background=4d8eff&color=fff"/>
+                    <img alt="User profile" class="w-8 h-8 object-cover" src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name ?? 'User') }}&background={{ $bgColorHex }}&color=fff"/>
                 </button>
 
                 <!-- Pop-up Menu -->
-                <div x-show="openAccountMenu" x-transition.origin.top.right style="display: none;" class="absolute top-full right-0 mt-2 w-48 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl overflow-hidden py-1 z-50">
+                <div x-show="openAccountMenu" x-transition.origin.top.right style="display: none;" class="absolute top-full right-0 mt-2 w-56 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-xl overflow-hidden py-1 z-50">
                     <div class="px-md py-sm border-b border-outline-variant/30 mb-1">
                         <p class="font-body-sm text-body-sm text-on-surface font-semibold leading-tight">{{ Auth::user()->name ?? 'Guest User' }}</p>
                         <p class="text-[10px] text-on-surface-variant font-mono-code leading-tight mt-1">{{ Auth::user()->email ?? 'guest@peta.com' }}</p>
+                        @auth
+                            <div class="mt-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $badgeClasses }}">
+                                {{ $displayRole }}
+                            </div>
+                        @endauth
                     </div>
                     <a href="{{ route('settings') }}" class="flex items-center gap-3 px-md py-sm hover:bg-white/5 transition-colors text-on-surface">
                         <span class="material-symbols-outlined text-[18px]">person</span>

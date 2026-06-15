@@ -17,28 +17,22 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Create Roles
-        $ownerRole = Role::firstOrCreate(['name' => 'owner']);
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $memberRole = Role::firstOrCreate(['name' => 'member']);
+        // Setup Roles and Permissions
+        $this->call(RolePermissionSeeder::class);
 
         // 2. Create Specific Admin/Owner Account
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@peta.com'],
-            [
-                'name' => 'admin',
-                'password' => Hash::make('admin'),
-            ]
-        );
-        // Ensure user has owner role
-        if (!$admin->hasRole('owner')) {
-            $admin->assignRole($ownerRole);
-        }
+        $admin = User::factory()->create([
+            'name' => 'PETA Core Team',
+            'email' => 'admin@peta.dev',
+            'password' => bcrypt('password123'),
+        ]);
+        
+        $admin->assignRole('Super Admin');
 
         // 3. Create Regular Users
         $users = User::factory(10)->create();
         foreach ($users as $user) {
-            $user->assignRole($memberRole);
+            $user->assignRole('Event Staff');
         }
 
         // 4. Create Communities

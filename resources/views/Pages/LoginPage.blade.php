@@ -154,7 +154,14 @@
                             <p class="text-on-surface-variant text-body-md">Start managing your events perfectly.</p>
                         </div>
 
-                        <form action="#" method="POST" class="flex flex-col gap-5">
+                        <form action="{{ route('register.post') }}" method="POST" class="flex flex-col gap-5" x-data="{
+                            selectedCommunityId: '',
+                            communities: {{ json_encode($communities ?? []) }},
+                            get requiresPassword() {
+                                const comm = this.communities.find(c => c.id == this.selectedCommunityId);
+                                return comm ? comm.requires_password : false;
+                            }
+                        }">
                             @csrf
                             
                             <!-- Name Input -->
@@ -187,6 +194,30 @@
                                     <button type="button" @click="show = !show" class="absolute top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface flex items-center justify-center z-10" style="right: 16px;">
                                         <span class="material-symbols-outlined text-[18px]" x-text="show ? 'visibility_off' : 'visibility'"></span>
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Community Selection (Optional) -->
+                            <div class="space-y-1.5">
+                                <label class="font-label-md text-label-md text-on-surface block mb-1">Join a Community (Optional)</label>
+                                <div class="relative group">
+                                    <span class="material-symbols-outlined absolute top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors z-10" style="left: 16px;">groups</span>
+                                    <select name="community_id" x-model="selectedCommunityId" class="w-full bg-surface-container border border-outline-variant/50 text-on-surface rounded-lg py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none relative z-0" style="padding-left: 48px; padding-right: 16px;">
+                                        <option value="">No Community (Create one later)</option>
+                                        <template x-for="community in communities" :key="community.id">
+                                            <option :value="community.id" x-text="community.name + (community.requires_password ? ' 🔒' : '')"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Community Password Input (Shown only if required) -->
+                            <div class="space-y-1.5" x-show="requiresPassword" x-transition>
+                                <label class="font-label-md text-label-md text-on-surface block mb-1">Community Password</label>
+                                <div class="relative group">
+                                    <span class="material-symbols-outlined absolute top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors z-10" style="left: 16px;">key</span>
+                                    <input type="password" name="community_password" placeholder="Enter community access code" :required="requiresPassword"
+                                           class="w-full bg-surface-container border border-outline-variant/50 text-on-surface rounded-lg py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline relative z-0" style="padding-left: 48px; padding-right: 16px;">
                                 </div>
                             </div>
 

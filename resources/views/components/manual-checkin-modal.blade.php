@@ -27,11 +27,20 @@
                     Enter the participant's email address to manually record their attendance for this event.
                 </p>
 
+                @php
+                    $currentUser = auth()->user();
+                    $isSuperAdmin = $currentUser ? $currentUser->hasRole('Super Admin') : false;
+                    $communityMember = $currentUser && isset($event) && $event->community ? $event->community->members()->where('user_id', $currentUser->id)->first() : null;
+                    $isAdmin = $isSuperAdmin || ($communityMember && in_array($communityMember->role, ['Owner', 'Admin']));
+                @endphp
+
                 <!-- Email Input -->
                 <div class="space-y-1.5">
                     <label class="font-label-md text-label-md text-on-surface block mb-1">Participant Email <span class="text-error">*</span></label>
                     <input type="email" name="email" required placeholder="participant@example.com" 
-                           class="w-full bg-surface-container border border-outline-variant/50 text-on-surface rounded-lg py-2.5 px-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline">
+                           value="{{ $isAdmin ? '' : ($currentUser->email ?? '') }}"
+                           {{ $isAdmin ? '' : 'readonly' }}
+                           class="w-full bg-surface-container border border-outline-variant/50 text-on-surface rounded-lg py-2.5 px-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline {{ $isAdmin ? '' : 'opacity-70 cursor-not-allowed' }}">
                 </div>
 
             </div>

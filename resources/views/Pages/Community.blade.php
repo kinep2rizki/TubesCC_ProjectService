@@ -173,7 +173,7 @@
 
     <!-- Modals -->
     <x-role-builder-modal />
-    <x-community-guidelines-modal />
+    <x-community-guidelines-modal :community="$community" />
     <x-create-community-modal />
 </div>
 @endsection

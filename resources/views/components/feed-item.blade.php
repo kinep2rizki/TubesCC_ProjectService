@@ -2,7 +2,8 @@
     'type' => 'default', // success, warning, default
     'initials' => null,
     'name',
-    'description'
+    'description',
+    'nameColor' => null
 ])
 
 @php
@@ -39,7 +40,7 @@
         @endif
     </div>
     <div class="flex-1 min-w-0">
-        <div class="font-body-base text-body-base {{ $type === 'warning' ? 'text-outline-variant italic' : 'text-on-surface' }} truncate">{{ $name }}</div>
+        <div class="font-body-base text-body-base {{ $type === 'warning' ? 'text-outline-variant italic' : ($nameColor ?? 'text-on-surface') }} truncate">{{ $name }}</div>
         <div class="font-body-sm text-body-sm {{ $type === 'warning' ? 'text-error' : 'text-on-surface-variant' }} truncate">{{ $description }}</div>
     </div>
 </div>

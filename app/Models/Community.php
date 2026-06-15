@@ -12,6 +12,11 @@ class Community extends Model
         'name',
         'description',
         'owner_id',
+        'password',
+    ];
+
+    protected $hidden = [
+        'password',
     ];
 
     public function owner()

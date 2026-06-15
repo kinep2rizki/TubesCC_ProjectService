@@ -21,6 +21,10 @@
         @php
             $activeClass = 'bg-secondary-container text-on-secondary-container rounded-lg px-md py-sm border-l-4 border-primary active:translate-x-1 transition-transform';
             $inactiveClass = 'text-on-surface-variant hover:text-on-surface px-md py-sm hover:bg-white/5 transition-all duration-200 active:translate-x-1 rounded-lg';
+            
+            $activeCommunityId = session('active_community_id');
+            $latestEvent = \App\Models\Event::where('community_id', $activeCommunityId)->latest('start_date')->first();
+            $defaultEventId = $latestEvent ? $latestEvent->id : 1;
         @endphp
 
         <!-- Dashboard Tab -->
@@ -30,29 +34,40 @@
         </a>
         
         <!-- Events Tab -->
-        <a class="flex items-center gap-md {{ request()->routeIs('events', 'event-detail') ? $activeClass : $inactiveClass }}" href="{{ route('events') }}">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('events', 'event-detail') ? '1' : '0' }};">event</span>
+        <a class="flex items-center gap-md {{ request()->routeIs('events', 'event-detail', 'participants', 'attendance', 'certificates') ? $activeClass : $inactiveClass }}" href="{{ route('events') }}">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('events', 'event-detail', 'participants', 'attendance', 'certificates') ? '1' : '0' }};">event</span>
             <span class="font-label-caps text-label-caps">Events</span>
         </a>
-        <!-- Participants Tab -->
-        <a class="flex items-center gap-md {{ request()->routeIs('participants') ? $activeClass : $inactiveClass }}" href="{{ route('participants', ['eventId' => 1]) }}">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('participants') ? '1' : '0' }};">group</span>
-            <span class="font-label-caps text-label-caps">Participants</span>
-        </a>
-        <!-- Attendance Tab -->
-        <a class="flex items-center gap-md {{ request()->routeIs('attendance') ? $activeClass : $inactiveClass }}" href="{{ route('attendance', ['eventId' => 1]) }}">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('attendance') ? '1' : '0' }};">fact_check</span>
-            <span class="font-label-caps text-label-caps">Attendance</span>
-        </a>
-        <!-- Certificates Tab -->
-        <a class="flex items-center gap-md {{ request()->routeIs('certificates') ? $activeClass : $inactiveClass }}" href="{{ route('certificates', ['eventId' => 1]) }}">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('certificates') ? '1' : '0' }};">card_membership</span>
-            <span class="font-label-caps text-label-caps">Certificates</span>
-        </a>
+
+        @role('Super Admin')
         <a class="flex items-center gap-md {{ request()->routeIs('communities') ? $activeClass : $inactiveClass }}" href="{{ route('communities') }}">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('communities') ? '1' : '0' }};">hub</span>
             <span class="font-label-caps text-label-caps">Communities</span>
         </a>
+        @endrole
+        
+        @php
+            $canManageUsers = false;
+            if (auth()->user()) {
+                if (auth()->user()->hasRole('Super Admin')) {
+                    $canManageUsers = true;
+                } elseif ($activeCommunityId) {
+                    $canManageUsers = \App\Models\CommunityMember::where('user_id', auth()->id())
+                        ->where('community_id', $activeCommunityId)
+                        ->whereIn('role', ['Admin', 'Owner'])
+                        ->exists();
+                }
+            }
+        @endphp
+
+        @if($canManageUsers)
+        <a class="flex items-center gap-md {{ request()->routeIs('users') ? $activeClass : $inactiveClass }}" href="{{ route('users') }}">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('users') ? '1' : '0' }};">group</span>
+            <span class="font-label-caps text-label-caps">Users</span>
+        </a>
+        @endif
+
+        @role('Super Admin')
         <a class="flex items-center gap-md {{ request()->routeIs('analytics') ? $activeClass : $inactiveClass }}" href="{{ route('analytics') }}">
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('analytics') ? '1' : '0' }};">analytics</span>
             <span class="font-label-caps text-label-caps">Analytics</span>
@@ -62,6 +77,7 @@
             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' {{ request()->routeIs('settings') ? '1' : '0' }};">settings</span>
             <span class="font-label-caps text-label-caps">Settings</span>
         </a>
+        @endrole
     </div>
     <!-- Footer Tabs -->
     <div class="border-t border-outline-variant/30 pt-sm mt-sm flex flex-col gap-xs">

@@ -25,7 +25,7 @@ Route::group([
     Route::post('me', [AuthController::class, 'me'])->middleware('auth:api');
 });
 
-Route::group(['middleware' => 'auth:api'], function() {
+Route::group(['middleware' => 'auth:api', 'as' => 'api.'], function() {
     // Communities
     Route::get('/communities', [CommunityController::class, 'index']);
     Route::post('/communities', [CommunityController::class, 'store']);

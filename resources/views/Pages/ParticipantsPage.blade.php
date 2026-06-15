@@ -20,14 +20,20 @@
     x-init="$watch('selected', value => { selectAll = value.length === participants.length })"
     class="max-w-container-max mx-auto w-full flex flex-col gap-xl">
     
-    <!-- Page Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
+    <!-- Event Header -->
+    <x-event-header :event="$event" activeTab="participants" />
+
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md mt-sm">
         <div>
-            <h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface">Participants</h1>
-            <p class="font-body-base text-body-base text-on-surface-variant mt-1">Manage attendees, view statuses, and export data.</p>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">Participant List</h3>
         </div>
         
+        @php
+            $user = auth()->user();
+            $canManage = $user && isset($event) && $event->community ? $user->canManageParticipants($event->community_id) : false;
+        @endphp
         <div class="flex items-center gap-sm w-full sm:w-auto">
+            @if($canManage)
             <button @click="showExportModal = true" class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-surface-container border border-outline-variant/50 text-on-surface font-body-sm text-body-sm hover:bg-surface-container-highest transition-colors flex-1 sm:flex-none">
                 <span class="material-symbols-outlined text-[18px]">download</span>
                 Export CSV
@@ -36,6 +42,7 @@
                 <span class="material-symbols-outlined text-[18px]">person_add</span>
                 Add New
             </button>
+            @endif
         </div>
     </div>
 
@@ -43,34 +50,27 @@
     <div>
 
         <!-- Toolbar / Filters -->
-        <div class="flex flex-col sm:flex-row justify-between items-center bg-surface-container-lowest p-xs rounded-xl border border-outline-variant/30 gap-sm mb-lg">
+        <form method="GET" action="{{ route('participants', $event->id ?? 1) }}" class="flex flex-col sm:flex-row justify-between items-center bg-surface-container-lowest p-xs rounded-xl border border-outline-variant/30 gap-sm mb-lg">
             <!-- Table specific search -->
             <div class="relative w-full sm:max-w-xs flex items-center">
                 <span class="material-symbols-outlined absolute left-3 text-outline-variant text-[20px]">search</span>
-                <input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-on-surface placeholder-outline-variant focus:ring-1 focus:ring-primary focus:bg-surface-container transition-all font-body-sm text-body-sm" placeholder="Search participants..." type="text"/>
+                <input name="search" value="{{ request('search') }}" onchange="this.form.submit()" class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-on-surface placeholder-outline-variant focus:ring-1 focus:ring-primary focus:bg-surface-container transition-all font-body-sm text-body-sm" placeholder="Search participants..." type="text"/>
             </div>
             
             <!-- Filters -->
             <div class="flex items-center gap-sm w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 hide-scrollbar no-scrollbar">
-                <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors font-body-sm text-body-sm whitespace-nowrap">
-                    Role
-                    <span class="material-symbols-outlined text-[16px]">expand_more</span>
-                </button>
-                <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors font-body-sm text-body-sm whitespace-nowrap">
-                    Institution
-                    <span class="material-symbols-outlined text-[16px]">expand_more</span>
-                </button>
-                <button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors font-body-sm text-body-sm whitespace-nowrap">
-                    Status
-                    <span class="material-symbols-outlined text-[16px]">expand_more</span>
-                </button>
+                <select name="status" onchange="this.form.submit()" class="bg-transparent border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors font-body-sm text-body-sm rounded-md px-3 py-1.5 focus:outline-none">
+                    <option value="">Status (All)</option>
+                    <option value="Registered" {{ request('status') == 'Registered' ? 'selected' : '' }}>Registered</option>
+                    <option value="Attended" {{ request('status') == 'Attended' ? 'selected' : '' }}>Attended</option>
+                </select>
                 <div class="w-px h-6 bg-outline-variant/50 mx-xs hidden sm:block"></div>
-                <button class="flex items-center gap-2 px-3 py-1.5 rounded-md text-primary hover:bg-primary-container/10 transition-colors font-body-sm text-body-sm whitespace-nowrap">
+                <a href="{{ route('participants', $event->id ?? 1) }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-primary hover:bg-primary-container/10 transition-colors font-body-sm text-body-sm whitespace-nowrap">
                     <span class="material-symbols-outlined text-[16px]">filter_list_off</span>
                     Clear
-                </button>
+                </a>
             </div>
-        </div>
+        </form>
 
         <!-- Data Table (SaaS Style) -->
         <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
@@ -93,10 +93,38 @@
                     </thead>
                     <tbody class="divide-y divide-outline-variant/20">
                         @forelse($participants as $participant)
+                            @php
+                                $membership = $participant->user ? $participant->user->communityMemberships->where('community_id', $event->community_id)->first() : null;
+                                $localRole = $membership ? ucfirst($membership->role) : null;
+                                
+                                $roleDisplay = 'Attendee';
+                                $roleColor = 'text-on-surface-variant opacity-70';
+
+                                if ($localRole === 'Owner') {
+                                    $roleDisplay = 'Owner';
+                                    $roleColor = 'text-pink-500 font-semibold';
+                                } elseif ($localRole === 'Admin') {
+                                    $roleDisplay = 'Admin';
+                                    $roleColor = 'text-orange-500 font-semibold';
+                                } elseif ($localRole === 'Moderator') {
+                                    $roleDisplay = 'Moderator';
+                                    $roleColor = 'text-amber-500 font-semibold';
+                                } elseif ($localRole === 'Member') {
+                                    $roleDisplay = 'Member';
+                                    $roleColor = 'text-teal-500 font-medium';
+                                } else {
+                                    // Check global roles
+                                    if ($participant->user && $participant->user->hasRole('Super Admin')) {
+                                        $roleDisplay = 'Super Admin';
+                                        $roleColor = 'text-error font-semibold';
+                                    }
+                                }
+                            @endphp
                         <x-participant-row 
                             id="p{{ $participant->id }}"
                             name="{{ $participant->user->name ?? 'Unknown' }}"
-                            role="Attendee"
+                            role="{{ $roleDisplay }}"
+                            roleColor="{{ $roleColor }}"
                             email="{{ $participant->user->email ?? 'N/A' }}"
                             institution="General Participant"
                             status="{{ $participant->status }}"
@@ -114,18 +142,23 @@
             
             <!-- Pagination Footer -->
             <div class="flex items-center justify-between px-md py-sm bg-surface-container/30 border-t border-outline-variant/30">
-                <span class="font-body-sm text-body-sm text-on-surface-variant">Showing <span x-text="selected.length ? selected.length + ' selected' : '1 to 4 of 128 results'"></span></span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant">
+                    Showing <span x-text="selected.length ? selected.length + ' selected' : '{{ $participants->firstItem() ?? 0 }} to {{ $participants->lastItem() ?? 0 }} of {{ $participants->total() }} results'"></span>
+                </span>
                 <div class="flex items-center gap-xs">
-                    <button class="p-1 rounded-md text-on-surface-variant hover:bg-white/5 disabled:opacity-50 transition-colors" disabled>
+                    <a href="{{ $participants->previousPageUrl() }}" class="p-1 rounded-md text-on-surface-variant hover:bg-white/5 transition-colors {{ $participants->onFirstPage() ? 'opacity-50 pointer-events-none' : '' }}">
                         <span class="material-symbols-outlined text-[20px]">chevron_left</span>
-                    </button>
-                    <button class="w-8 h-8 rounded-md bg-primary-container/20 text-primary border border-primary-container/30 font-body-sm text-body-sm flex items-center justify-center">1</button>
-                    <button class="w-8 h-8 rounded-md text-on-surface-variant hover:bg-white/5 border border-transparent font-body-sm text-body-sm flex items-center justify-center transition-colors">2</button>
-                    <button class="w-8 h-8 rounded-md text-on-surface-variant hover:bg-white/5 border border-transparent font-body-sm text-body-sm flex items-center justify-center transition-colors">3</button>
-                    <span class="text-on-surface-variant px-1">...</span>
-                    <button class="p-1 rounded-md text-on-surface-variant hover:bg-white/5 transition-colors">
+                    </a>
+                    
+                    @foreach ($participants->links()->elements[0] as $page => $url)
+                        <a href="{{ $url }}" class="w-8 h-8 rounded-md {{ $page == $participants->currentPage() ? 'bg-primary-container/20 text-primary border border-primary-container/30' : 'text-on-surface-variant hover:bg-white/5 border border-transparent' }} font-body-sm text-body-sm flex items-center justify-center transition-colors">
+                            {{ $page }}
+                        </a>
+                    @endforeach
+
+                    <a href="{{ $participants->nextPageUrl() }}" class="p-1 rounded-md text-on-surface-variant hover:bg-white/5 transition-colors {{ !$participants->hasMorePages() ? 'opacity-50 pointer-events-none' : '' }}">
                         <span class="material-symbols-outlined text-[20px]">chevron_right</span>
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>

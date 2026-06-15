@@ -110,16 +110,23 @@
         </div>
     </div>
 
-    <!-- Page Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-xl gap-md">
+    <!-- Event Header -->
+    <x-event-header :event="$event" activeTab="certificates" />
+
+    <!-- Action Bar -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mt-sm">
         <div>
-            <h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-surface">Certificates</h2>
-            <p class="font-body-base text-body-base text-on-surface-variant mt-sm">Manage, preview, and issue credentials for recent events.</p>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">Certificates</h3>
         </div>
-        <button @click="showModal = true" class="bg-primary-container text-on-primary-container font-label-caps text-label-caps px-lg py-md rounded-lg hover:bg-primary transition-colors flex items-center gap-sm shadow-lg shadow-primary-container/20 border border-primary-container/50">
-            <span class="material-symbols-outlined text-[18px]">settings</span> 
-            <span>Generate Settings</span>
-        </button>
+        
+        <div class="flex items-center gap-sm w-full md:w-auto">
+            @hasanyrole('Super Admin|Community Manager')
+            <button @click="showModal = true" class="flex-1 md:flex-none flex items-center justify-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary font-label-caps text-label-caps hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(77,142,255,0.3)]">
+                <span class="material-symbols-outlined text-[18px]">settings</span> 
+                <span>Generate Settings</span>
+            </button>
+            @endhasanyrole
+        </div>
     </div>
 
     <!-- Bento Layout: Gallery & Preview -->
