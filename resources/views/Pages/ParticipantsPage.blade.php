@@ -73,8 +73,8 @@
         </form>
 
         <!-- Data Table (SaaS Style) -->
-        <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-            <div class="overflow-x-auto">
+        <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+            <div class="overflow-x-auto pb-32">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="border-b border-outline-variant/30 bg-surface-container/30">
@@ -122,6 +122,8 @@
                             @endphp
                         <x-participant-row 
                             id="p{{ $participant->id }}"
+                            participantId="{{ $participant->id }}"
+                            eventId="{{ $event->id }}"
                             name="{{ $participant->user->name ?? 'Unknown' }}"
                             role="{{ $roleDisplay }}"
                             roleColor="{{ $roleColor }}"

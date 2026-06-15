@@ -121,39 +121,26 @@
                         <button class="text-[10px] font-label-caps text-primary hover:underline">Mark all read</button>
                     </div>
                     <div class="max-h-80 overflow-y-auto custom-scrollbar">
-                        <!-- Item 1 -->
-                        <div class="p-md border-b border-outline-variant/10 hover:bg-surface-variant/50 transition-colors cursor-pointer flex gap-sm items-start relative group">
-                            <div class="w-2 h-2 rounded-full bg-primary mt-1.5 absolute left-2"></div>
-                            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary border border-primary/20 ml-2">
-                                <span class="material-symbols-outlined text-[16px]">event</span>
+                        @forelse(Auth::user()->notifications as $notification)
+                            <a href="{{ $notification->data['url'] ?? '#' }}" class="block p-md border-b border-outline-variant/10 hover:bg-surface-variant/50 transition-colors cursor-pointer relative group">
+                                <div class="flex gap-sm items-start">
+                                    @if(empty($notification->read_at))
+                                        <div class="w-2 h-2 rounded-full bg-primary mt-1.5 absolute left-2"></div>
+                                    @endif
+                                    <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 text-emerald-400 border border-emerald-500/20 ml-2">
+                                        <span class="material-symbols-outlined text-[16px]">workspace_premium</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-xs text-on-surface font-body-sm leading-relaxed">{!! $notification->data['message'] ?? 'You have a new notification.' !!}</p>
+                                        <p class="text-[10px] text-on-surface-variant font-mono-code mt-1">{{ $notification->created_at->diffForHumans() }}</p>
+                                    </div>
+                                </div>
+                            </a>
+                        @empty
+                            <div class="p-md text-center">
+                                <p class="text-xs text-on-surface-variant">No notifications.</p>
                             </div>
-                            <div class="flex-1">
-                                <p class="text-xs text-on-surface font-body-sm leading-relaxed"><span class="font-bold">DevFest 2024</span> is starting in 1 hour!</p>
-                                <p class="text-[10px] text-on-surface-variant font-mono-code mt-1">10 mins ago</p>
-                            </div>
-                        </div>
-                        <!-- Item 2 -->
-                        <div class="p-md border-b border-outline-variant/10 hover:bg-surface-variant/50 transition-colors cursor-pointer flex gap-sm items-start relative group">
-                            <div class="w-2 h-2 rounded-full bg-primary mt-1.5 absolute left-2"></div>
-                            <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 text-emerald-400 border border-emerald-500/20 ml-2">
-                                <span class="material-symbols-outlined text-[16px]">workspace_premium</span>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-xs text-on-surface font-body-sm leading-relaxed">Your certificate for <span class="font-bold">React Masterclass</span> is ready.</p>
-                                <p class="text-[10px] text-on-surface-variant font-mono-code mt-1">2 hours ago</p>
-                            </div>
-                        </div>
-                        <!-- Item 3 -->
-                        <div class="p-md hover:bg-surface-variant/50 transition-colors cursor-pointer flex gap-sm items-start relative group">
-                            <div class="w-2 h-2 rounded-full bg-primary mt-1.5 absolute left-2"></div>
-                            <div class="w-8 h-8 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 text-tertiary border border-tertiary/20 ml-2">
-                                <span class="material-symbols-outlined text-[16px]">forum</span>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-xs text-on-surface font-body-sm leading-relaxed">New announcement in <span class="font-bold">Frontend Community</span>.</p>
-                                <p class="text-[10px] text-on-surface-variant font-mono-code mt-1">1 day ago</p>
-                            </div>
-                        </div>
+                        @endforelse
                     </div>
                     <div class="p-xs text-center border-t border-outline-variant/30 bg-surface-container-highest/20">
                         <a href="#" class="text-[10px] font-label-caps text-on-surface-variant hover:text-primary transition-colors py-1 block">View All Notifications</a>

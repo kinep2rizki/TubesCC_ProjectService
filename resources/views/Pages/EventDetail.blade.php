@@ -32,22 +32,9 @@
                     <span class="font-display-lg-mobile text-display-lg-mobile text-tertiary font-bold">{{ $conversionRate }}%</span>
                 </div>
             </div>
-            <!-- Placeholder for Line Chart -->
-            <div class="flex-1 min-h-[240px] bg-surface-container-lowest rounded-lg border border-outline-variant/20 relative flex items-center justify-center overflow-hidden z-10">
-                <!-- CSS Pattern for chart background -->
-                <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(theme('colors.on-surface') 1px, transparent 1px), linear-gradient(90deg, theme('colors.on-surface') 1px, transparent 1px); background-size: 40px 40px;"></div>
-                <!-- Simulated Chart Line -->
-                <svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 100">
-                    <defs>
-                        <lineargradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stop-color="theme('colors.primary')" stop-opacity="0.2"></stop>
-                            <stop offset="100%" stop-color="theme('colors.primary')" stop-opacity="0"></stop>
-                        </lineargradient>
-                    </defs>
-                    <path d="M0,100 L0,80 C20,70 30,90 50,50 C70,10 80,40 100,20 L100,100 Z" fill="url(#chartGrad)"></path>
-                    <path class="drop-shadow-[0_4px_8px_rgba(173,198,255,0.2)]" d="M0,80 C20,70 30,90 50,50 C70,10 80,40 100,20" fill="none" stroke="theme('colors.primary')" stroke-linejoin="round" stroke-width="2"></path>
-                </svg>
-                <span class="text-on-surface-variant text-body-sm font-body-sm z-10 bg-surface-container/80 px-3 py-1.5 rounded border border-outline-variant/30 backdrop-blur-md">Chart Rendering...</span>
+            <!-- Line Chart -->
+            <div class="flex-1 min-h-[240px] bg-surface-container-lowest rounded-lg border border-outline-variant/20 relative flex items-center justify-center overflow-hidden z-10 p-md">
+                <canvas id="registrationChart"></canvas>
             </div>
         </div>
         
@@ -80,7 +67,7 @@
                         <span class="font-label-caps text-label-caps text-on-surface-variant">Template</span>
                         <span class="font-label-caps text-label-caps text-secondary">Verified</span>
                     </div>
-                    <p class="font-mono-code text-mono-code text-on-surface truncate">Hackathon_Standard_v2.pdf</p>
+                    <p class="font-mono-code text-mono-code text-on-surface truncate">Auto_Generated.pdf</p>
                 </div>
                 <button class="w-full flex items-center justify-center gap-xs px-md py-sm rounded-lg border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-variant transition-colors font-label-caps text-label-caps">
                     <span class="material-symbols-outlined text-[18px]" data-icon="settings">settings</span>
@@ -88,22 +75,22 @@
                 </button>
             </div>
             
-            <!-- Demographic Donut Chart (Placeholder) -->
+            <!-- Demographic Donut Chart -->
             <div class="flex-1 bg-surface-container-low backdrop-blur-md rounded-xl border border-outline-variant/30 p-md shadow-sm flex flex-col">
                 <h4 class="font-body-base text-body-base font-semibold text-on-surface mb-sm">Demographics</h4>
                 <div class="flex-1 flex items-center justify-center relative my-sm">
                     <!-- CSS simulated donut chart -->
-                    <div class="w-32 h-32 rounded-full relative flex items-center justify-center" style="background: conic-gradient(theme('colors.primary') 0% 60%, theme('colors.secondary') 60% 85%, theme('colors.tertiary') 85% 100%);">
+                    <div class="w-32 h-32 rounded-full relative flex items-center justify-center" style="background: conic-gradient(theme('colors.emerald.500') 0% {{ $attendedPct }}%, theme('colors.amber.500') {{ $attendedPct }}% {{ $attendedPct + $registeredPct }}%, theme('colors.gray.500') {{ $attendedPct + $registeredPct }}% 100%);">
                         <div class="w-24 h-24 bg-surface-container-low rounded-full flex flex-col items-center justify-center z-10">
-                            <span class="font-body-sm text-body-sm text-on-surface-variant">Top Group</span>
-                            <span class="font-headline-sm text-headline-sm text-primary font-bold">60%</span>
+                            <span class="font-body-sm text-body-sm text-on-surface-variant text-center leading-tight">Top Group<br>{{ $topGroupName }}</span>
+                            <span class="font-headline-sm text-headline-sm text-primary font-bold">{{ $topGroupPct }}%</span>
                         </div>
                     </div>
                 </div>
                 <div class="flex justify-center gap-md mt-sm">
-                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-primary"></span><span class="text-xs text-on-surface-variant">Students</span></div>
-                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-secondary"></span><span class="text-xs text-on-surface-variant">Pros</span></div>
-                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-tertiary"></span><span class="text-xs text-on-surface-variant">Other</span></div>
+                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-xs text-on-surface-variant">Attended</span></div>
+                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-xs text-on-surface-variant">Registered</span></div>
+                    <div class="flex items-center gap-xs"><span class="w-3 h-3 rounded-full bg-gray-500"></span><span class="text-xs text-on-surface-variant">Other</span></div>
                 </div>
             </div>
         </div>
@@ -148,4 +135,76 @@
     
     <x-edit-event-modal :event="$event" />
 </div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('registrationChart');
+        if (!ctx) return;
+        
+        // CSS variables for chart colors
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary') || '#4F46E5';
+        const onSurfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--color-on-surface-variant') || '#9CA3AF';
+        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--color-outline-variant') || 'rgba(255,255,255,0.1)';
+        
+        // Create gradient
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)'); 
+        gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($registrationDates) !!},
+                datasets: [{
+                    label: 'Registrations',
+                    data: {!! json_encode($registrationCounts) !!},
+                    borderColor: primaryColor,
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: primaryColor,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 12,
+                        titleFont: { size: 13, family: 'Inter' },
+                        bodyFont: { size: 14, family: 'Inter', weight: 'bold' },
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) { return context.parsed.y + ' registrations'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { color: onSurfaceColor, font: { family: 'Inter', size: 11 } }
+                    },
+                    y: {
+                        grid: { color: gridColor, borderDash: [5, 5], drawBorder: false },
+                        ticks: { color: onSurfaceColor, font: { family: 'Inter', size: 11 }, precision: 0, beginAtZero: true }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+            }
+        });
+    });
+</script>
+@endpush
 @endsection

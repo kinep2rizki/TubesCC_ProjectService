@@ -9,7 +9,13 @@ class CertificateController extends Controller
     public function index($eventId)
     {
         $event = \App\Models\Event::findOrFail($eventId);
-        $allEvents = \App\Models\Event::all();
+        
+        $activeCommunityId = session('active_community_id');
+        if ($event->community_id != $activeCommunityId) {
+            return redirect()->route('events')->with('error', 'The event belongs to a different community.');
+        }
+
+        $allEvents = \App\Models\Event::where('community_id', $activeCommunityId)->get();
         $participants = \App\Models\EventParticipant::with('user')
             ->where('event_id', $eventId)
             ->where('status', 'Attended')
@@ -24,7 +30,31 @@ class CertificateController extends Controller
             'template' => 'required|string',
         ]);
 
-        // Logic to batch generate certificates for attended participants
+        $event = \App\Models\Event::findOrFail($eventId);
+        
+        // Fetch all attended participants
+        $participants = \App\Models\EventParticipant::with('user')
+            ->where('event_id', $eventId)
+            ->where('status', 'Attended')
+            ->get();
+
+        foreach ($participants as $participant) {
+            // Check if certificate already exists
+            $certificate = \App\Models\Certificate::firstOrCreate(
+                ['event_participant_id' => $participant->id],
+                [
+                    'template_style' => $validated['template'],
+                    'file_url' => '/certificates/dummy-certificate.pdf', // Dummy simulated URL for now
+                    'issued_at' => now(),
+                ]
+            );
+
+            // Send notification to user
+            if ($participant->user) {
+                $participant->user->notify(new \App\Notifications\CertificateGeneratedNotification($event, $certificate));
+            }
+        }
+
         return back()->with('success', 'Certificates generated successfully.');
     }
 

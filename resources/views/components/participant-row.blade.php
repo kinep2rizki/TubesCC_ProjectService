@@ -1,5 +1,7 @@
 @props([
     'id',
+    'participantId',
+    'eventId',
     'name',
     'role',
     'email',
@@ -13,25 +15,19 @@
 
 @php
     $statusColors = [
-        'Confirmed' => [
+        'Registered' => [
             'bg' => 'bg-tertiary-container/20',
             'border' => 'border-tertiary-container/30',
             'text' => 'text-tertiary',
             'dot' => 'bg-tertiary'
         ],
-        'Pending Payment' => [
-            'bg' => 'bg-error-container/20',
-            'border' => 'border-error-container/30',
-            'text' => 'text-error',
-            'dot' => 'bg-error'
-        ],
-        'Checked In' => [
+        'Attended' => [
             'bg' => 'bg-primary-container/20',
             'border' => 'border-primary-container/30',
             'text' => 'text-primary',
             'dot' => 'bg-primary'
         ],
-        'Cancelled' => [
+        'Not Attending' => [
             'bg' => 'bg-outline-variant/20',
             'border' => 'border-outline-variant/50',
             'text' => 'text-on-surface-variant',
@@ -39,7 +35,8 @@
         ]
     ];
     
-    $colors = $statusColors[$status] ?? $statusColors['Confirmed'];
+    // Fallback to Registered if status not recognized
+    $colors = $statusColors[$status] ?? $statusColors['Registered'];
 @endphp
 
 <tr class="hover:bg-white/[0.02] transition-colors group">
@@ -65,11 +62,45 @@
     </td>
     <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant">{{ $email }}</td>
     <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant">{{ $institution }}</td>
-    <td class="px-md py-3">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full {{ $colors['bg'] }} border {{ $colors['border'] }} {{ $colors['text'] }} font-label-caps text-[10px] gap-1">
+    <td class="px-md py-3 relative" x-data="{ openStatus: false }">
+        <button @click="openStatus = !openStatus" @click.outside="openStatus = false" class="inline-flex items-center px-2 py-0.5 rounded-full {{ $colors['bg'] }} border {{ $colors['border'] }} {{ $colors['text'] }} font-label-caps text-[10px] gap-1 focus:outline-none hover:opacity-80 transition-opacity cursor-pointer">
             <span class="w-1.5 h-1.5 rounded-full {{ $colors['dot'] }}"></span>
             {{ $status }}
-        </span>
+            <span class="material-symbols-outlined text-[12px] ml-1">expand_more</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div x-show="openStatus" 
+             x-transition.opacity.duration.200ms
+             class="absolute left-md top-10 w-36 bg-surface-container-high border border-outline-variant/30 rounded-lg shadow-lg z-50 py-xs"
+             style="display: none;">
+            <form method="POST" action="{{ route('participants.update', ['eventId' => $eventId, 'participantId' => $participantId]) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="Registered">
+                <button type="submit" class="w-full text-left px-sm py-2 hover:bg-white/5 text-[11px] font-label-caps text-tertiary flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> Registered
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('participants.update', ['eventId' => $eventId, 'participantId' => $participantId]) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="Attended">
+                <button type="submit" class="w-full text-left px-sm py-2 hover:bg-white/5 text-[11px] font-label-caps text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Attended
+                </button>
+            </form>
+
+            <form method="POST" action="{{ route('participants.update', ['eventId' => $eventId, 'participantId' => $participantId]) }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="Not Attending">
+                <button type="submit" class="w-full text-left px-sm py-2 hover:bg-white/5 text-[11px] font-label-caps text-error flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-error"></span> Not Attending
+                </button>
+            </form>
+        </div>
     </td>
     <td class="px-md py-3 font-mono-code text-mono-code text-on-surface-variant hidden md:table-cell">{{ $date }}</td>
     <td class="px-md py-3 text-right">

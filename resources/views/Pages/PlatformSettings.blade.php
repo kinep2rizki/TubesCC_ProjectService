@@ -17,6 +17,7 @@
             <a class="px-md py-sm text-on-surface font-body-sm font-semibold bg-surface-container-high/50 rounded-lg whitespace-nowrap transition-colors" href="#profile">Profile</a>
             <a class="px-md py-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm transition-colors whitespace-nowrap" href="#security">Security</a>
             <a class="px-md py-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm transition-colors whitespace-nowrap" href="#notifications">Notifications</a>
+            <a class="px-md py-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm transition-colors whitespace-nowrap" href="#certificates">My Certificates</a>
             <a class="px-md py-sm text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm transition-colors whitespace-nowrap" href="#api">API Keys</a>
         </nav>
         
@@ -108,6 +109,42 @@
                 </div>
                 <div class="p-lg">
                     <p class="text-on-surface-variant text-body-sm">Notification settings coming soon.</p>
+                </div>
+            </section>
+
+            <!-- Certificates Section -->
+            <section class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden scroll-mt-2xl" id="certificates">
+                <div class="px-lg py-md border-b border-outline-variant/30 bg-surface-container-lowest/50">
+                    <h2 class="font-headline-sm text-headline-sm text-on-surface">My Certificates</h2>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">View and download your event certificates grouped by community.</p>
+                </div>
+                <div class="p-lg space-y-xl">
+                    @forelse($certificatesByCommunity as $communityName => $certs)
+                        <div class="space-y-sm">
+                            <h3 class="font-label-caps text-label-caps text-on-surface-variant">{{ $communityName }}</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+                                @foreach($certs as $cert)
+                                    <div class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-md flex items-center justify-between group hover:bg-surface-container transition-colors">
+                                        <div class="flex flex-col gap-xs">
+                                            <span class="font-body-base font-semibold text-on-surface">{{ $cert->participant->event->title ?? 'Event' }}</span>
+                                            <span class="font-body-sm text-on-surface-variant">{{ \Carbon\Carbon::parse($cert->issued_at)->format('M d, Y') }}</span>
+                                        </div>
+                                        <a href="{{ $cert->file_url }}" target="_blank" class="w-10 h-10 rounded-full bg-surface flex items-center justify-center border border-outline-variant text-on-surface-variant hover:text-primary-container hover:border-primary-container transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                            <span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+                                        </a>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-xl">
+                            <div class="w-16 h-16 rounded-full bg-surface-container mx-auto flex items-center justify-center text-on-surface-variant mb-md">
+                                <span class="material-symbols-outlined text-[32px]" data-icon="workspace_premium">workspace_premium</span>
+                            </div>
+                            <h3 class="font-body-base font-semibold text-on-surface">No Certificates Yet</h3>
+                            <p class="font-body-sm text-on-surface-variant mt-xs">Attend events and wait for the organizers to issue certificates.</p>
+                        </div>
+                    @endforelse
                 </div>
             </section>
 

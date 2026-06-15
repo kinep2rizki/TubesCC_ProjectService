@@ -46,6 +46,7 @@ Route::group(['middleware' => ['auth']], function () {
     // Participants & Attendance
     Route::get('/events/{eventId}/participants', [ParticipantController::class, 'index'])->name('participants');
     Route::post('/events/{eventId}/participants', [ParticipantController::class, 'store'])->name('participants.store');
+    Route::put('/events/{eventId}/participants/{participantId}', [ParticipantController::class, 'update'])->name('participants.update');
     Route::get('/events/{eventId}/participants/export', [ParticipantController::class, 'export'])->name('participants.export');
     Route::get('/events/{eventId}/attendance', [AttendanceController::class, 'index'])->name('attendance');
     Route::post('/events/{eventId}/attendance', [AttendanceController::class, 'store'])->name('attendance.store');

@@ -31,4 +31,19 @@ class Event extends Model
     {
         return $this->hasMany(EventParticipant::class);
     }
+
+    public function getStatusAttribute($value)
+    {
+        $now = now();
+        $start = \Carbon\Carbon::parse($this->start_date);
+        $end = \Carbon\Carbon::parse($this->end_date);
+
+        if ($now < $start) {
+            return 'Coming Soon';
+        } elseif ($now > $end) {
+            return 'Finished';
+        } else {
+            return 'Ongoing';
+        }
+    }
 }

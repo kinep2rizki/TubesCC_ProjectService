@@ -8,7 +8,16 @@ class ProfileController extends Controller
 {
     public function edit()
     {
-        return view('Pages.PlatformSettings');
+        $user = auth()->user();
+        
+        // Fetch user's certificates grouped by community
+        $certificates = $user->certificates()->with(['participant.event.community'])->get();
+        
+        $certificatesByCommunity = $certificates->groupBy(function($cert) {
+            return $cert->participant->event->community->name ?? 'Unknown Community';
+        });
+
+        return view('Pages.PlatformSettings', compact('user', 'certificatesByCommunity'));
     }
 
     public function update(Request $request)

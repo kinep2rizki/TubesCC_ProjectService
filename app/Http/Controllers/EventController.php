@@ -27,13 +27,55 @@ class EventController extends Controller
             $q->where('community_id', $activeCommunityId);
         })->count();
 
+        // Calculate Monthly Events Data (Last 6 Months)
+        $monthlyEventsData = [];
+        $monthlyEventsLabels = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $month = \Carbon\Carbon::now()->subMonths($i);
+            $monthlyEventsLabels[] = $month->format('M');
+            $monthlyEventsData[] = \App\Models\Event::where('community_id', $activeCommunityId)
+                ->whereMonth('start_date', $month->month)
+                ->whereYear('start_date', $month->year)
+                ->count();
+        }
+
+        // Calculate Attendance Trends (Last 5 Events)
+        $recentEvents = \App\Models\Event::where('community_id', $activeCommunityId)
+            ->orderBy('start_date', 'desc')
+            ->take(5)
+            ->get()
+            ->reverse()
+            ->values();
+            
+        $attendanceTrendsLabels = [];
+        $attendanceTrendsRegistered = [];
+        $attendanceTrendsAttended = [];
+        
+        foreach ($recentEvents as $idx => $ev) {
+            $attendanceTrendsLabels[] = 'E' . ($idx + 1); // Or $ev->title
+            $registered = $ev->participants()->where('status', 'Registered')->count();
+            $attended = $ev->participants()->where('status', 'Attended')->count();
+            $attendanceTrendsRegistered[] = $registered;
+            $attendanceTrendsAttended[] = $attended;
+        }
+
+        // Pad if less than 5 events
+        while (count($attendanceTrendsLabels) < 5) {
+            $attendanceTrendsLabels[] = '-';
+            $attendanceTrendsRegistered[] = 0;
+            $attendanceTrendsAttended[] = 0;
+        }
+
         // Get upcoming events
         $upcomingEvents = \App\Models\Event::where('community_id', $activeCommunityId)
                             ->orderBy('start_date', 'desc')->take(3)->get();
 
-        // Get recent activities related to the active community (or simply all for now, or filter if activity log has community context)
-        // Since ActivityLog might not have community_id, let's just get the recent ones.
-        $recentActivities = \App\Models\ActivityLog::with('user')->orderBy('created_at', 'desc')->take(5)->get();
+        // Get recent activities related to the active community
+        $recentActivities = \App\Models\ActivityLog::with('user')
+            ->where('community_id', $activeCommunityId)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
 
         $activeCommunity = \App\Models\Community::find($activeCommunityId);
 
@@ -44,7 +86,12 @@ class EventController extends Controller
             'certificatesGenerated',
             'upcomingEvents',
             'recentActivities',
-            'activeCommunity'
+            'activeCommunity',
+            'monthlyEventsLabels',
+            'monthlyEventsData',
+            'attendanceTrendsLabels',
+            'attendanceTrendsRegistered',
+            'attendanceTrendsAttended'
         ));
     }
 
@@ -60,14 +107,44 @@ class EventController extends Controller
     {
         $event = \App\Models\Event::with('participants.user')->findOrFail($id);
         
+        $activeCommunityId = session('active_community_id');
+        if ($event->community_id != $activeCommunityId) {
+            return redirect()->route('events')->with('error', 'The event belongs to a different community.');
+        }
+        
         $registeredCount = $event->participants->where('status', 'Registered')->count();
         $attendedCount = $event->participants->where('status', 'Attended')->count();
         $waitlistedCount = $event->participants->where('status', 'Waitlisted')->count();
+        $notAttendingCount = $event->participants->where('status', 'Not Attending')->count();
         
         $totalForConversion = $registeredCount + $attendedCount;
         $conversionRate = $event->capacity > 0 ? round(($totalForConversion / $event->capacity) * 100, 1) : 0;
 
-        return view('Pages.EventDetail', compact('event', 'registeredCount', 'attendedCount', 'waitlistedCount', 'conversionRate'));
+        // Calculate demographics (Status distribution)
+        $totalParticipants = $event->participants->count();
+        $attendedPct = $totalParticipants > 0 ? round(($attendedCount / $totalParticipants) * 100) : 0;
+        $registeredPct = $totalParticipants > 0 ? round(($registeredCount / $totalParticipants) * 100) : 0;
+        $otherPct = 100 - $attendedPct - $registeredPct;
+        if ($totalParticipants == 0) $otherPct = 0;
+        
+        $topGroupPct = max($attendedPct, $registeredPct, $otherPct);
+        $topGroupName = $topGroupPct == $attendedPct ? 'Attended' : ($topGroupPct == $registeredPct ? 'Registered' : 'Other');
+
+        // Registration growth over last 7 days
+        $registrationDates = [];
+        $registrationCounts = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = \Carbon\Carbon::now()->subDays($i)->format('Y-m-d');
+            $count = $event->participants()->whereDate('created_at', '<=', $date)->count();
+            $registrationDates[] = \Carbon\Carbon::now()->subDays($i)->format('M d');
+            $registrationCounts[] = $count;
+        }
+
+        return view('Pages.EventDetail', compact(
+            'event', 'registeredCount', 'attendedCount', 'waitlistedCount', 
+            'conversionRate', 'attendedPct', 'registeredPct', 'otherPct', 
+            'topGroupPct', 'topGroupName', 'registrationDates', 'registrationCounts'
+        ));
     }
 
     public function store(\Illuminate\Http\Request $request)
@@ -84,8 +161,6 @@ class EventController extends Controller
         if (!auth()->user()->canManageEvent($validated['community_id'])) {
             abort(403, 'Unauthorized to create events for this community.');
         }
-
-        $validated['status'] = 'Draft';
 
         Event::create($validated);
 

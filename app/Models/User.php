@@ -52,6 +52,21 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Get the certificates for this user.
+     */
+    public function certificates()
+    {
+        return $this->hasManyThrough(
+            Certificate::class,
+            EventParticipant::class,
+            'user_id', // Foreign key on event_participants table
+            'event_participant_id', // Foreign key on certificates table
+            'id', // Local key on users table
+            'id' // Local key on event_participants table
+        );
+    }
+
+    /**
      * Check if user has a specific role in a community.
      */
     public function hasCommunityRole($communityId, $roles)

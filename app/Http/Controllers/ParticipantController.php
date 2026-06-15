@@ -11,6 +11,12 @@ class ParticipantController extends Controller
     public function index(Request $request, $eventId)
     {
         $event = Event::findOrFail($eventId);
+        
+        $activeCommunityId = session('active_community_id');
+        if ($event->community_id != $activeCommunityId) {
+            return redirect()->route('events')->with('error', 'The event belongs to a different community.');
+        }
+
         $query = EventParticipant::with('user')->where('event_id', $eventId);
 
         if ($request->filled('search')) {
@@ -54,7 +60,21 @@ class ParticipantController extends Controller
             'status' => $validated['status']
         ]);
 
-        return back()->with('success', 'Participant added successfully.');
+        return redirect()->route('participants', $eventId)->with('success', 'Participant added successfully.');
+    }
+
+    public function update(Request $request, $eventId, $participantId)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:Registered,Attending,Not Attending'
+        ]);
+
+        $participant = \App\Models\EventParticipant::where('event_id', $eventId)->findOrFail($participantId);
+        $participant->update([
+            'status' => $validated['status']
+        ]);
+
+        return redirect()->route('participants', $eventId)->with('success', 'Participant status updated successfully.');
     }
 
     public function export(Request $request, $eventId)

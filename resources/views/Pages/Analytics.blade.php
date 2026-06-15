@@ -128,7 +128,7 @@
                 <div class="flex-1 relative w-full h-full pt-sm min-h-[150px]">
                     <canvas id="certificateStatusChart"></canvas>
                     <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
-                        <span class="font-headline-sm text-headline-sm text-on-surface">72%</span>
+                        <span class="font-headline-sm text-headline-sm text-on-surface">{{ $certificateIssuedPercentage }}%</span>
                         <span class="text-[10px] font-label-caps text-outline">Issued</span>
                     </div>
                 </div>
@@ -216,4 +216,115 @@
     <!-- Modals -->
     <x-export-report-modal />
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 3. Participation Growth Chart (Analytics)
+        const participationGrowthCtx = document.getElementById('participationGrowthChart');
+        if (participationGrowthCtx) {
+            new Chart(participationGrowthCtx, {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($growthLabels) !!},
+                    datasets: [
+                        {
+                            label: 'Unique',
+                            data: {!! json_encode($uniqueData) !!},
+                            borderColor: '#adc6ff',
+                            backgroundColor: 'rgba(173, 198, 255, 0.2)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#131315',
+                            pointBorderColor: '#adc6ff',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Returning',
+                            data: {!! json_encode($returningData) !!},
+                            borderColor: '#adc6ff',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: '#131315',
+                            pointBorderColor: '#adc6ff',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#2a2a2c',
+                            titleColor: '#e5e1e4',
+                            bodyColor: '#e5e1e4',
+                            borderColor: '#424754',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#8c909f', font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        y: {
+                            display: false,
+                            min: 0,
+                            suggestedMax: Math.max(...{!! json_encode($uniqueData) !!}, 10) + 5
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // 4. Certificate Status Donut Chart (Analytics)
+        const certificateStatusCtx = document.getElementById('certificateStatusChart');
+        if (certificateStatusCtx) {
+            new Chart(certificateStatusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Issued', 'Pending'],
+                    datasets: [{
+                        data: [{{ $issuedCertificates }}, {{ $pendingCertificates }}],
+                        backgroundColor: ['#adc6ff', 'rgba(66, 71, 84, 0.3)'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '80%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#2a2a2c',
+                            titleColor: '#e5e1e4',
+                            bodyColor: '#e5e1e4',
+                            borderColor: '#424754',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+@endpush
 @endsection

@@ -9,6 +9,12 @@ class AttendanceController extends Controller
     public function index($eventId)
     {
         $event = \App\Models\Event::findOrFail($eventId);
+        
+        $activeCommunityId = session('active_community_id');
+        if ($event->community_id != $activeCommunityId) {
+            return redirect()->route('events')->with('error', 'The event belongs to a different community.');
+        }
+
         $attendances = \App\Models\Attendance::with(['participant.user'])
             ->whereHas('participant', function($query) use ($eventId) {
                 $query->where('event_id', $eventId);

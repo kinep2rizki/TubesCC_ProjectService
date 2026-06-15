@@ -11,6 +11,7 @@ class ActivityLog extends Model
 
     protected $fillable = [
         'user_id',
+        'community_id',
         'action',
         'description',
         'ip_address',
@@ -19,5 +20,10 @@ class ActivityLog extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function community()
+    {
+        return $this->belongsTo(Community::class);
     }
 }

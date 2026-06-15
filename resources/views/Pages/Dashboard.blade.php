@@ -210,4 +210,122 @@
 <x-community-guidelines-modal :community="$activeCommunity" />
 @endif
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Monthly Events Area Chart
+        const monthlyEventsCtx = document.getElementById('monthlyEventsChart');
+        if (monthlyEventsCtx) {
+            new Chart(monthlyEventsCtx, {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($monthlyEventsLabels) !!},
+                    datasets: [{
+                        label: 'Monthly Events',
+                        data: {!! json_encode($monthlyEventsData) !!},
+                        borderColor: '#adc6ff',
+                        backgroundColor: 'rgba(173, 198, 255, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#131315',
+                        pointBorderColor: '#adc6ff',
+                        pointBorderWidth: 1.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#2a2a2c',
+                            titleColor: '#e5e1e4',
+                            bodyColor: '#e5e1e4',
+                            borderColor: '#424754',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#8c909f', font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        y: {
+                            display: false,
+                            min: 0,
+                            suggestedMax: Math.max(...{!! json_encode($monthlyEventsData) !!}, 5) + 2
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // 2. Attendance Trends Bar Chart
+        const attendanceTrendsCtx = document.getElementById('attendanceTrendsChart');
+        if (attendanceTrendsCtx) {
+            new Chart(attendanceTrendsCtx, {
+                type: 'bar',
+                data: {
+                    labels: {!! json_encode($attendanceTrendsLabels) !!},
+                    datasets: [
+                        {
+                            label: 'Registered',
+                            data: {!! json_encode($attendanceTrendsRegistered) !!},
+                            backgroundColor: 'rgba(173, 198, 255, 0.2)',
+                            hoverBackgroundColor: 'rgba(173, 198, 255, 0.3)',
+                            borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        },
+                        {
+                            label: 'Attended',
+                            data: {!! json_encode($attendanceTrendsAttended) !!},
+                            backgroundColor: '#adc6ff',
+                            borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#2a2a2c',
+                            titleColor: '#e5e1e4',
+                            bodyColor: '#e5e1e4',
+                            borderColor: '#424754',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#8c909f', font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        y: {
+                            display: false,
+                            min: 0,
+                            suggestedMax: Math.max(...{!! json_encode($attendanceTrendsRegistered) !!}, 10) + 5
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+@endpush
 @endsection
