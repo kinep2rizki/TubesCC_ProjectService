@@ -10,28 +10,28 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewActivityLogged implements ShouldBroadcastNow
+class NewCommunityFeed implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $communityId;
-    public $activityData;
+    public $feedData;
 
-    public function __construct($communityId, $activityData)
+    public function __construct($communityId, $feedData)
     {
         $this->communityId = $communityId;
-        $this->activityData = $activityData;
+        $this->feedData = $feedData;
     }
 
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('community.' . $this->communityId . '.activities'),
+            new PrivateChannel('community.' . $this->communityId . '.feed'),
         ];
     }
     
     public function broadcastAs(): string
     {
-        return 'new-activity';
+        return 'new-feed';
     }
 }

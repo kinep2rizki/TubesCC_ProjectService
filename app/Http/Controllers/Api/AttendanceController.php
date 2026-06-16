@@ -79,6 +79,15 @@ class AttendanceController extends Controller
 
         $participant->update(['status' => 'Attended']);
 
+        // Calculate counts for broadcasting
+        $presentCount = Attendance::whereHas('participant', function($query) use ($eventId) {
+            $query->where('event_id', $eventId);
+        })->count();
+        $expectedCount = EventParticipant::where('event_id', $eventId)->count();
+
+        // Broadcast the update
+        broadcast(new \App\Events\LiveAttendanceUpdated($eventId, $presentCount, $expectedCount));
+
         return response()->json([
             'success' => true, 
             'message' => 'Participant checked in successfully', 

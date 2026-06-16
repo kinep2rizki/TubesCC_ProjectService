@@ -39,6 +39,15 @@ class JwtMiddleware
                     'auth_user_id' => $userData['id'] ?? null,
                     'auth_user_roles' => $userData['roles'] ?? ['User'], // Menyimpan Global Roles dari Spatie
                 ]);
+
+                // Set user resolver for Laravel Broadcasting/Echo compatibility
+                $request->setUserResolver(function () use ($userData) {
+                    return new \Illuminate\Auth\GenericUser([
+                        'id' => $userData['id'] ?? null,
+                        'roles' => $userData['roles'] ?? ['User'],
+                        'name' => $userData['name'] ?? null,
+                    ]);
+                });
             } else {
                 // Jika response bukan 200 (mungkin 401 karena expired/blacklist)
                 return response()->json([

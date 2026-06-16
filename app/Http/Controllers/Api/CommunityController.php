@@ -94,6 +94,15 @@ class CommunityController extends Controller
     {
         $request->validate(['content' => 'required|string']);
         $community = Community::findOrFail($id);
+        
+        $feedData = [
+            'content' => $request->content,
+            'user_id' => $request->auth_user_id,
+            'created_at' => now()->toIso8601String()
+        ];
+        
+        broadcast(new \App\Events\NewCommunityFeed($id, $feedData));
+        
         return response()->json(['success' => true, 'message' => 'Feed posted successfully'], 201);
     }
 

@@ -10,28 +10,30 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewActivityLogged implements ShouldBroadcastNow
+class LiveAttendanceUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $communityId;
-    public $activityData;
+    public $eventId;
+    public $presentCount;
+    public $expectedCount;
 
-    public function __construct($communityId, $activityData)
+    public function __construct($eventId, $presentCount, $expectedCount)
     {
-        $this->communityId = $communityId;
-        $this->activityData = $activityData;
+        $this->eventId = $eventId;
+        $this->presentCount = $presentCount;
+        $this->expectedCount = $expectedCount;
     }
 
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('community.' . $this->communityId . '.activities'),
+            new PrivateChannel('event.' . $this->eventId . '.attendance'),
         ];
     }
     
     public function broadcastAs(): string
     {
-        return 'new-activity';
+        return 'attendance-updated';
     }
 }
