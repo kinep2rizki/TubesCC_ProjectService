@@ -19,10 +19,7 @@ class Community extends Model
         'password',
     ];
 
-    public function owner()
-    {
-        return $this->belongsTo(User::class, 'owner_id');
-    }
+
 
     public function members()
     {

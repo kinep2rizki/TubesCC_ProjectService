@@ -5,13 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
+use App\Models\ActivityLog;
 
 class EventController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $events = Event::with('community')->latest()->get();
-        return response()->json(['data' => $events], 200);
+        $query = Event::with('community');
+        
+        if ($request->has('community_id')) {
+            $query->where('community_id', $request->community_id);
+        }
+
+        $events = $query->latest()->get();
+        return response()->json(['success' => true, 'data' => $events], 200);
     }
 
     public function store(Request $request)
@@ -22,40 +29,70 @@ class EventController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'location' => 'required|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
-        $validated['status'] = 'Draft';
+        $validated['status'] = 'Ongoing';
         $event = Event::create($validated);
 
-        return response()->json(['message' => 'Event created successfully', 'data' => $event], 201);
+        ActivityLog::create([
+            'user_id' => $request->auth_user_id,
+            'community_id' => $validated['community_id'],
+            'action' => 'created_event',
+            'description' => "created a new event '{$event->title}'",
+            'ip_address' => request()->ip(),
+        ]);
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Event created successfully', 
+            'data' => $event
+        ], 201);
     }
 
     public function show($id)
     {
         $event = Event::with(['community'])->findOrFail($id);
-        return response()->json(['data' => $event], 200);
+        
+        // Return event along with stats
+        $registeredCount = $event->participants()->where('status', 'Registered')->count();
+        $attendedCount = $event->participants()->where('status', 'Attended')->count();
+
+        $event->stats = [
+            'registered' => $registeredCount,
+            'attended' => $attendedCount
+        ];
+
+        return response()->json(['success' => true, 'data' => $event], 200);
     }
 
     public function update(Request $request, $id)
     {
         $event = Event::findOrFail($id);
+        
         $validated = $request->validate([
             'title' => 'string|max:255',
             'start_date' => 'date',
             'end_date' => 'date|after_or_equal:start_date',
             'location' => 'string|max:255',
-            'status' => 'string|in:Draft,Published,Completed',
+            'status' => 'string',
+            'description' => 'nullable|string',
         ]);
 
         $event->update($validated);
 
-        return response()->json(['message' => 'Event updated successfully', 'data' => $event], 200);
+        return response()->json([
+            'success' => true, 
+            'message' => 'Event updated successfully', 
+            'data' => $event
+        ], 200);
     }
 
     public function destroy($id)
     {
         $event = Event::findOrFail($id);
         $event->delete();
-        return response()->json(['message' => 'Event deleted successfully'], 200);
+        
+        return response()->json(['success' => true, 'message' => 'Event deleted successfully'], 200);
     }
 }

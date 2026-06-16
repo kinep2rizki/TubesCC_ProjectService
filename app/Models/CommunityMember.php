@@ -19,8 +19,5 @@ class CommunityMember extends Model
         return $this->belongsTo(Community::class);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+
 }

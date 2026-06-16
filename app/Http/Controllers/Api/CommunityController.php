@@ -5,14 +5,32 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Community;
+use App\Services\UserService;
 
 class CommunityController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Get user communities. For now, fetch all or related.
-        $communities = Community::with(['members.user'])->get();
-        return response()->json(['data' => $communities], 200);
+        // Get user communities where they are a member
+        $userId = $request->auth_user_id;
+        
+        $communities = Community::whereHas('members', function($q) use ($userId) {
+            $q->where('user_id', $userId);
+        })->with('members')->get();
+
+        // Data Stitching: Fetch all owners
+        $ownerIds = $communities->pluck('owner_id')->unique()->toArray();
+        $usersData = UserService::getUsersBatch($ownerIds);
+
+        $communities->transform(function ($community) use ($usersData) {
+            $community->owner_detail = $usersData[$community->owner_id] ?? null;
+            return $community;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $communities
+        ], 200);
     }
 
     public function store(Request $request)
@@ -22,7 +40,7 @@ class CommunityController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $validated['owner_id'] = auth('api')->id() ?? 1;
+        $validated['owner_id'] = $request->auth_user_id;
 
         $community = Community::create($validated);
 
@@ -31,29 +49,33 @@ class CommunityController extends Controller
             'role' => 'Owner'
         ]);
 
-        return response()->json(['message' => 'Community created successfully', 'data' => $community], 201);
+        // Stitching
+        $userData = UserService::getUser($validated['owner_id']);
+        $community->owner_detail = $userData;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Community created successfully', 
+            'data' => $community
+        ], 201);
     }
 
     public function feed($id)
     {
         $community = Community::findOrFail($id);
-        // Assuming we have a posts/feed relation in the future
-        // $feed = $community->posts()->latest()->get();
-        return response()->json(['data' => []], 200);
+        return response()->json(['success' => true, 'data' => []], 200);
     }
 
     public function storeFeed(Request $request, $id)
     {
         $request->validate(['content' => 'required|string']);
         $community = Community::findOrFail($id);
-        // Logic to store feed
-        return response()->json(['message' => 'Feed posted successfully'], 201);
+        return response()->json(['success' => true, 'message' => 'Feed posted successfully'], 201);
     }
 
     public function updateRoles(Request $request, $id)
     {
         $community = Community::findOrFail($id);
-        // Logic to update roles based on user ID and role type
-        return response()->json(['message' => 'Roles updated successfully'], 200);
+        return response()->json(['success' => true, 'message' => 'Roles updated successfully'], 200);
     }
 }
