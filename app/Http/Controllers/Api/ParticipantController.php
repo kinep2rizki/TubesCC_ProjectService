@@ -13,11 +13,28 @@ class ParticipantController extends Controller
 {
     use CommunityAuthorization;
 
-    public function index($eventId)
+    public function index(Request $request, $eventId)
     {
         $event = Event::findOrFail($eventId);
         $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
-        $participants = EventParticipant::where('event_id', $eventId)->paginate(15);
+        
+        $query = EventParticipant::where('event_id', $eventId);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $matchingUserIds = UserService::searchUsers($request->search);
+            if (!empty($matchingUserIds)) {
+                $query->whereIn('user_id', $matchingUserIds);
+            } else {
+                // Force empty result if search doesn't match any user
+                $query->where('id', -1);
+            }
+        }
+
+        $participants = $query->paginate(15);
         
         // Data Stitching
         $userIds = $participants->pluck('user_id')->unique()->toArray();
@@ -35,11 +52,24 @@ class ParticipantController extends Controller
     {
         $event = Event::findOrFail($eventId);
 
-        // Ambil ID dari token JWT
-        $userId = $request->auth_user_id;
+        if ($request->filled('email') && $request->filled('name')) {
+            // Manual Add by Admin
+            $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+            
+            $userData = UserService::findOrCreateUser($request->email, $request->name);
+            if (!$userData) {
+                return response()->json(['success' => false, 'message' => 'Failed to resolve user.'], 500);
+            }
+            $userId = $userData['id'];
+            $status = $request->input('status', 'Registered');
+        } else {
+            // Self Join
+            $userId = $request->auth_user_id;
+            $status = 'Registered';
 
-        if (!$userId) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            if (!$userId) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
         }
 
         $participant = EventParticipant::firstOrCreate([
@@ -47,17 +77,29 @@ class ParticipantController extends Controller
             'user_id' => $userId,
         ], [
             'ticket_number' => 'TKT-' . strtoupper(uniqid()),
-            'status' => 'Registered'
+            'status' => $status
         ]);
 
-        $userData = UserService::getUser($userId);
-        $participant->user_detail = $userData;
+        $participant->user_detail = UserService::getUser($userId);
 
         return response()->json([
             'success' => true, 
             'message' => 'Successfully registered to event', 
             'data' => $participant
         ], 201);
+    }
+
+    public function update(Request $request, $eventId, $participantId)
+    {
+        $event = Event::findOrFail($eventId);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+
+        $request->validate(['status' => 'required|string']);
+
+        $participant = EventParticipant::where('event_id', $eventId)->findOrFail($participantId);
+        $participant->update(['status' => $request->status]);
+
+        return response()->json(['success' => true, 'message' => 'Status updated successfully.']);
     }
 
     public function export($eventId)

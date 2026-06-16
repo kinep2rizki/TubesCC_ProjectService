@@ -52,29 +52,57 @@ class AttendanceController extends Controller
 
     public function checkIn(Request $request, $eventId)
     {
-        $request->validate(['user_id' => 'required|integer']);
-        $userId = $request->user_id;
-
         $event = Event::findOrFail($eventId);
 
-        // Jika user bukan check in diri sendiri, maka dia harus Owner/Moderator
-        if ($userId != $request->auth_user_id) {
+        if ($request->filled('email')) {
+            // Manual Check-in by Admin via email
             $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+            
+            $userData = UserService::findUserByEmail($request->email);
+            if (!$userData) {
+                return response()->json(['success' => false, 'message' => 'User not found in Auth Service.'], 404);
+            }
+            $userId = $userData['id'];
+
+            $participant = EventParticipant::where('event_id', $eventId)
+                ->where('user_id', $userId)
+                ->first();
+
+        } elseif ($request->filled('ticket_number')) {
+            // Check-in via QR Code Scanner
+            $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+            
+            $participant = EventParticipant::where('event_id', $eventId)
+                ->where('ticket_number', $request->ticket_number)
+                ->first();
+
+        } else {
+            // Self Check-in or Check-in by ID
+            $request->validate(['user_id' => 'required|integer']);
+            $userId = $request->user_id;
+
+            if ($userId != $request->auth_user_id) {
+                $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+            }
+
+            $participant = EventParticipant::where('event_id', $eventId)
+                ->where('user_id', $userId)
+                ->first();
         }
 
-        $participant = EventParticipant::where('event_id', $eventId)
-            ->where('user_id', $userId)
-            ->first();
-
         if (!$participant) {
-            return response()->json(['success' => false, 'message' => 'User is not registered for this event.'], 404);
+            return response()->json(['success' => false, 'message' => 'Participant is not registered for this event.'], 404);
+        }
+
+        if ($participant->status === 'Attended') {
+            return response()->json(['success' => false, 'message' => 'Participant has already checked in.'], 400);
         }
 
         $attendance = Attendance::firstOrCreate([
             'event_participant_id' => $participant->id,
         ], [
             'check_in_time' => now(),
-            'check_in_method' => 'Manual'
+            'check_in_method' => $request->filled('ticket_number') ? 'QR Scan' : 'Manual'
         ]);
 
         $participant->update(['status' => 'Attended']);

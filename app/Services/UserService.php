@@ -64,4 +64,68 @@ class UserService
         $users = self::getUsersBatch([$userId]);
         return $users[$userId] ?? null;
     }
+
+    /**
+     * Find user by email or create new in Auth Service.
+     */
+    public static function findOrCreateUser($email, $name)
+    {
+        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://127.0.0.1:8001');
+        
+        try {
+            $response = Http::timeout(5)->post("{$authServiceUrl}/api/auth/users/find-or-create", [
+                'email' => $email,
+                'name' => $name
+            ]);
+            
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Exception $e) {
+            Log::error('Auth Service find-or-create failed', ['error' => $e->getMessage()]);
+        }
+        return null;
+    }
+
+    /**
+     * Find user by email in Auth Service.
+     */
+    public static function findUserByEmail($email)
+    {
+        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://127.0.0.1:8001');
+        
+        try {
+            $response = Http::timeout(5)->post("{$authServiceUrl}/api/auth/users/find-by-email", [
+                'email' => $email
+            ]);
+            
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Exception $e) {
+            Log::error('Auth Service find-by-email failed', ['error' => $e->getMessage()]);
+        }
+        return null;
+    }
+
+    /**
+     * Search users by keyword in Auth Service, returning array of user IDs.
+     */
+    public static function searchUsers($keyword)
+    {
+        $authServiceUrl = env('AUTH_SERVICE_URL', 'http://127.0.0.1:8001');
+        
+        try {
+            $response = Http::timeout(5)->post("{$authServiceUrl}/api/auth/users/search", [
+                'keyword' => $keyword
+            ]);
+            
+            if ($response->successful()) {
+                return $response->json(); // Array of IDs
+            }
+        } catch (\Exception $e) {
+            Log::error('Auth Service search failed', ['error' => $e->getMessage()]);
+        }
+        return [];
+    }
 }

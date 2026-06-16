@@ -113,4 +113,64 @@ class CommunityController extends Controller
         $community = Community::findOrFail($id);
         return response()->json(['success' => true, 'message' => 'Roles updated successfully'], 200);
     }
+
+    public function members($id)
+    {
+        $community = Community::with('members')->findOrFail($id);
+        
+        $userIds = $community->members->pluck('user_id')->unique()->toArray();
+        $usersData = UserService::getUsersBatch($userIds);
+
+        $community->members->transform(function ($member) use ($usersData) {
+            $member->user_detail = $usersData[$member->user_id] ?? null;
+            return $member;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $community->members
+        ], 200);
+    }
+    public function getMemberships(Request $request)
+    {
+        $userIds = $request->input('user_ids', []);
+        $memberships = \App\Models\CommunityMember::whereIn('user_id', $userIds)
+            ->with('community')
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $memberships
+        ], 200);
+    }
+
+    public function updateUserRole(Request $request, $communityId, $userId)
+    {
+        $role = $request->input('role');
+        
+        if ($role === 'Not a Member') {
+            \App\Models\CommunityMember::where('community_id', $communityId)
+                ->where('user_id', $userId)
+                ->delete();
+        } else {
+            \App\Models\CommunityMember::updateOrCreate(
+                ['community_id' => $communityId, 'user_id' => $userId],
+                ['role' => $role]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User community role updated successfully'
+        ], 200);
+    }
+
+    public function getAll(Request $request)
+    {
+        $communities = Community::all();
+        return response()->json([
+            'success' => true,
+            'data' => $communities
+        ], 200);
+    }
 }
