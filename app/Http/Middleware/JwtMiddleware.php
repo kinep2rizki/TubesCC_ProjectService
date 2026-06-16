@@ -37,7 +37,7 @@ class JwtMiddleware
                 // Simpan user_id ke dalam request agar bisa digunakan oleh Controller
                 $request->merge([
                     'auth_user_id' => $userData['id'] ?? null,
-                    // Jika butuh role untuk otorisasi akses (admin/peserta), bisa juga disisipkan
+                    'auth_user_roles' => $userData['roles'] ?? ['User'], // Menyimpan Global Roles dari Spatie
                 ]);
             } else {
                 // Jika response bukan 200 (mungkin 401 karena expired/blacklist)

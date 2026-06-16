@@ -7,19 +7,23 @@ use Illuminate\Http\Request;
 use App\Models\EventParticipant;
 use App\Models\Event;
 use App\Services\UserService;
+use App\Traits\CommunityAuthorization;
 
 class ParticipantController extends Controller
 {
+    use CommunityAuthorization;
+
     public function index($eventId)
     {
         $event = Event::findOrFail($eventId);
-        $participants = EventParticipant::where('event_id', $eventId)->get();
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+        $participants = EventParticipant::where('event_id', $eventId)->paginate(15);
         
         // Data Stitching
         $userIds = $participants->pluck('user_id')->unique()->toArray();
         $usersData = UserService::getUsersBatch($userIds);
 
-        $participants->transform(function ($participant) use ($usersData) {
+        $participants->getCollection()->transform(function ($participant) use ($usersData) {
             $participant->user_detail = $usersData[$participant->user_id] ?? null;
             return $participant;
         });
@@ -58,6 +62,9 @@ class ParticipantController extends Controller
 
     public function export($eventId)
     {
+        $event = Event::findOrFail($eventId);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+
         return response()->json(['success' => true, 'message' => 'Export initiated'], 200);
     }
 }

@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Community;
 use App\Services\UserService;
+use App\Traits\CommunityAuthorization;
 
 class CommunityController extends Controller
 {
+    use CommunityAuthorization;
+
     public function index(Request $request)
     {
         // Get user communities where they are a member
@@ -16,13 +19,13 @@ class CommunityController extends Controller
         
         $communities = Community::whereHas('members', function($q) use ($userId) {
             $q->where('user_id', $userId);
-        })->with('members')->get();
+        })->with('members')->paginate(15);
 
         // Data Stitching: Fetch all owners
         $ownerIds = $communities->pluck('owner_id')->unique()->toArray();
         $usersData = UserService::getUsersBatch($ownerIds);
 
-        $communities->transform(function ($community) use ($usersData) {
+        $communities->getCollection()->transform(function ($community) use ($usersData) {
             $community->owner_detail = $usersData[$community->owner_id] ?? null;
             return $community;
         });
@@ -35,6 +38,19 @@ class CommunityController extends Controller
 
     public function store(Request $request)
     {
+        $userId = $request->auth_user_id;
+        $globalRoles = $request->auth_user_roles ?? [];
+
+        // Check if user is already an Owner of any community
+        $isAlreadyOwner = \App\Models\CommunityMember::where('user_id', $userId)
+            ->where('role', 'Owner')
+            ->exists();
+
+        // Super Admin can bypass this limit
+        if ($isAlreadyOwner && !in_array('Super Admin', $globalRoles)) {
+            return response()->json(['success' => false, 'message' => 'Anda hanya diizinkan untuk membuat/memiliki 1 komunitas.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -42,12 +58,20 @@ class CommunityController extends Controller
 
         $validated['owner_id'] = $request->auth_user_id;
 
-        $community = Community::create($validated);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $community = Community::create($validated);
 
-        $community->members()->create([
-            'user_id' => $validated['owner_id'],
-            'role' => 'Owner'
-        ]);
+            $community->members()->create([
+                'user_id' => $validated['owner_id'],
+                'role' => 'Owner'
+            ]);
+            
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to create community', 'error' => $e->getMessage()], 500);
+        }
 
         // Stitching
         $userData = UserService::getUser($validated['owner_id']);
@@ -75,6 +99,8 @@ class CommunityController extends Controller
 
     public function updateRoles(Request $request, $id)
     {
+        $this->authorizeCommunityAccess($id, ['Owner']);
+        
         $community = Community::findOrFail($id);
         return response()->json(['success' => true, 'message' => 'Roles updated successfully'], 200);
     }

@@ -6,9 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\ActivityLog;
+use App\Services\UserService;
+use App\Traits\CommunityAuthorization;
 
 class EventController extends Controller
 {
+    use CommunityAuthorization;
+
     public function index(Request $request)
     {
         $query = Event::with('community');
@@ -17,7 +21,7 @@ class EventController extends Controller
             $query->where('community_id', $request->community_id);
         }
 
-        $events = $query->latest()->get();
+        $events = $query->latest()->paginate(15);
         return response()->json(['success' => true, 'data' => $events], 200);
     }
 
@@ -32,16 +36,27 @@ class EventController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $validated['status'] = 'Ongoing';
-        $event = Event::create($validated);
+        $this->authorizeCommunityAccess($validated['community_id'], ['Owner']);
 
-        ActivityLog::create([
-            'user_id' => $request->auth_user_id,
-            'community_id' => $validated['community_id'],
-            'action' => 'created_event',
-            'description' => "created a new event '{$event->title}'",
-            'ip_address' => request()->ip(),
-        ]);
+        $validated['status'] = 'Ongoing';
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $event = Event::create($validated);
+
+            ActivityLog::create([
+                'user_id' => $request->auth_user_id,
+                'community_id' => $validated['community_id'],
+                'action' => 'created_event',
+                'description' => "created a new event '{$event->title}'",
+                'ip_address' => request()->ip(),
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Failed to create event', 'error' => $e->getMessage()], 500);
+        }
 
         return response()->json([
             'success' => true, 
@@ -70,6 +85,8 @@ class EventController extends Controller
     {
         $event = Event::findOrFail($id);
         
+        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+
         $validated = $request->validate([
             'title' => 'string|max:255',
             'start_date' => 'date',
@@ -91,6 +108,9 @@ class EventController extends Controller
     public function destroy($id)
     {
         $event = Event::findOrFail($id);
+        
+        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+
         $event->delete();
         
         return response()->json(['success' => true, 'message' => 'Event deleted successfully'], 200);

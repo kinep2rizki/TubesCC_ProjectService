@@ -10,9 +10,12 @@ use App\Models\EventParticipant;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use App\Services\UserService;
+use App\Traits\CommunityAuthorization;
 
 class CertificateController extends Controller
 {
+    use CommunityAuthorization;
+
     public function templates()
     {
         return response()->json(['success' => true, 'data' => []], 200);
@@ -31,6 +34,7 @@ class CertificateController extends Controller
         $participantIds = $request->participant_ids;
 
         $event = Event::findOrFail($eventId);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
 
         $query = EventParticipant::where('event_id', $eventId)
             ->where('status', 'Attended');

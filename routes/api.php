@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 
 
 
-Route::group(['middleware' => 'jwt', 'as' => 'api.'], function() {
+Route::group(['middleware' => ['throttle:60,1', 'jwt'], 'as' => 'api.'], function() {
     // Communities
     Route::get('/communities', [CommunityController::class, 'index']);
     Route::post('/communities', [CommunityController::class, 'store']);
