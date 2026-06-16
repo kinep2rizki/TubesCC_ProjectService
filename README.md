@@ -1,64 +1,73 @@
-# Tugas Besar CC - Project Service
+# Project Service API (Tubes CC)
 
-Repositori ini adalah layanan utama (**Project Service**) dari aplikasi PETA yang telah dimigrasi menjadi arsitektur Microservices.
-Layanan ini bertanggung jawab khusus untuk **Manajemen Komunitas, Event, Partisipasi, Attendance, dan Sertifikat**.
+Repositori ini adalah **Project Service API** yang berjalan murni sebagai *Backend (Port 8002)* pada arsitektur Microservices aplikasi PETA.
+Sistem ini bertanggung jawab atas _Business Logic_ dan pengelolaan data utama:
+- Komunitas (Community)
+- Acara (Event)
+- Absensi (Attendance)
+- Partisipasi (Participant)
+- Sertifikat (Certificate)
 
-> [!WARNING]
-> Layanan ini **tidak lagi memiliki fitur Autentikasi** secara internal. Fitur *Login*, *Register*, dan manajemen profil User telah dipindahkan sepenuhnya ke **Auth Service** (`TubesCC_BackendJWT`).
-
-## 🚀 Walkthrough Instalasi & Konfigurasi
-
-1. **Clone & Install Dependencies**
-   ```bash
-   git clone https://github.com/kinep2rizki/TubesCC_ProjectService.git
-   cd TubesCC_ProjectService
-   composer install
-   ```
-
-2. **Setup Environment**
-   - Salin file `.env.example` ke `.env`.
-   - Pastikan konfigurasi Database menunjuk ke `peta`.
-   ```env
-   DB_CONNECTION=pgsql
-   DB_HOST=127.0.0.1
-   DB_PORT=5432
-   DB_DATABASE=peta
-   DB_USERNAME=postgres
-   DB_PASSWORD=kinep2004
-   ```
-
-3. **Jalankan Migrasi**
-   Pastikan Anda sudah membuat database `peta` di PostgreSQL, lalu jalankan:
-   ```bash
-   php artisan migrate
-   ```
-
-4. **Jalankan Layanan (Port 8000)**
-   Jalankan Project Service di Port 8000:
-   ```bash
-   php artisan serve
-   ```
+> [!CAUTION]
+> **TIDAK ADA LAYER FRONTEND ATAU AUTENTIKASI DI SINI!**
+> 1. Layer antarmuka pengguna (Frontend UI Blade) telah dipisahkan ke repositori `TubesCC`.
+> 2. Layer autentikasi (Login, Register, Manajemen Role) telah dipisahkan ke repositori `TubesCC_BackendJWT` (berjalan di Port 8001).
 
 ---
 
-## 🤖 AI Context: Catatan Penting untuk Pengembangan Selanjutnya
+## 🚀 Rencana Integrasi & Penyesuaian
 
-Bagi AI atau developer yang membaca file ini di masa mendatang, berikut adalah konteks penuh terkait pemisahan sistem ini menjadi Microservices:
+Karena service ini telah dipisahkan, Anda **tidak bisa** langsung menjalankan aplikasi seperti monolitik lama. Berikut adalah hal-hal yang **harus diimplementasi** untuk menyambungkan ekosistem ini:
 
-### 📌 Perubahan yang Telah Terjadi
-1. **Pemisahan Auth**: Seluruh fitur login, register, token, dan autentikasi telah dipindahkan ke layanan `TubesCC_BackendJWT`.
-2. **Penghapusan Model User**: Model `User.php` dan tabel migrasi `users`, `personal_access_tokens`, serta manajemen peran dari `spatie/laravel-permission` telah **dihapus sepenuhnya** dari layanan ini.
+### 1. Implementasi JWT Validation Middleware
+Service ini dilindungi, tetapi fungsi validasi token `User` aslinya sudah terhapus.
+Untuk menerima HTTP Request dari Frontend yang mengandung Header `Authorization: Bearer <token>`, Anda harus:
+- **Opsi A (Paling Mudah)**: Install `tymon/jwt-auth` di service ini, lalu samakan `JWT_SECRET` di `.env` dengan milik `TubesCC_BackendJWT`. Buat middleware sederhana yang mengecek validitas token, lalu ekstrak nilai `sub` (User ID) dari payload JWT.
+- **Opsi B (Introspeksi API)**: Buat middleware yang melakukan request `Http::get('http://127.0.0.1:8001/api/auth/me')` ke Auth Service dengan meneruskan token tersebut. Jika Auth Service mengembalikan sukses (200 OK), maka request diteruskan.
 
-### 🚧 Hal-Hal yang Belum Diimplementasikan (TODO)
-Karena hilangnya Model User, beberapa endpoint mungkin mengalami error (rusak) pada versi ini karena `$item->user` tidak lagi me-return *Relationship Object*. Tugas-tugas berikut ini harus diselesaikan di tahap pengembangan selanjutnya:
+### 2. Restrukturisasi Endpoint Menjadi Murni API
+Semua Controller di repositori ini (seperti `CommunityController` atau `EventController`) yang sebelumnya mereturn `view('pages.community', ...)` **HARUS** diubah untuk mereturn response JSON murni:
+```php
+return response()->json([
+    'success' => true,
+    'data' => $communities
+]);
+```
+*(Saat ini kode Controller belum diubah seluruhnya menjadi API JSON, Anda harus mengubahnya secara bertahap!)*
 
-1. **Validasi Token (Middleware)**: 
-   - Anda perlu membuat Custom Middleware (misal `CheckJwtToken`) yang menangkap header `Authorization: Bearer <token>` dari Frontend, dan melakukan verifikasi manual (baik via *Token Signature Verification* maupun memanggil introspeksi token ke Auth Service).
-2. **Sistem Sinkronisasi/Stitching Data**:
-   - Jika endpoint membutuhkan data spesifik milik pengguna (misal: Menampilkan daftar partisipan dengan namanya), maka *Project Service* hanya memiliki `user_id` saja.
-   - Hal ini bisa diselesaikan dengan *Data Stitching* via Frontend (Frontend memanggil Auth Service untuk resolusi ID ke nama), atau
-   - *Data Stitching* via Guzzle HTTP di dalam Controller Project Service (Project Service meminta data pengguna ke `http://127.0.0.1:8001/api/auth/users/batch`).
-3. **Pengecekan Role & Permission**:
-   - Saat ini *Spatie Role* ada di Auth Service. Untuk menentukan apakah pengguna (dengan ID `X`) adalah Admin di Komunitas `Y`, sistem harus mengandalkan mekanisme Cross-Service untuk memvalidasi Role.
-4. **Event Broadcasting (Reverb)**:
-   - Manajemen Realtime masih terpasang, namun *Private Channel* yang membutuhkan autentikasi pengguna (`Broadcast::routes()`) perlu disesuaikan agar bisa mengautentikasi klien berdasar JWT dari Auth Service.
+### 3. Penyesuaian Relasi & Data Stitching (Cross-Service)
+Karena tidak ada Model `User` di service ini, maka tabel/relasi Eloquent bawaan Laravel seperti `$event->creator` atau `$community->owner` akan gagal.
+- Setiap entitas (Event, Komunitas) hanya menyimpan kolom `user_id` (Integer/UUID).
+- Untuk menampilkan nama pembuat *Event* ke layar pengguna, **Frontend UI** lah yang harus menembak 2 API sekaligus:
+  1. API Project Service (Port 8002) untuk mendapatkan Data Event (yang berisi `user_id: 5`).
+  2. API Auth Service (Port 8001) untuk mendapatkan Data Profil User ID `5`.
+  3. Menggabungkan data (Data Stitching) tersebut menggunakan Javascript di sisi Frontend.
+
+### 4. Manajemen Peran (Roles)
+Spatie Role Management (`admin`, `peserta`, dsb) ada di Auth Service. Jika Project Service harus mengecek apakah yang mengakses API ini adalah Admin, Project Service bisa melihat klaim *Role* yang bisa Anda sisipkan (Custom Claims) pada token JWT saat Auth Service menerbitkannya.
+
+---
+
+## 💻 Instalasi Lokal
+
+```bash
+# 1. Clone repository
+git clone https://github.com/kinep2rizki/TubesCC_ProjectService.git
+cd TubesCC_ProjectService
+
+# 2. Install Dependency
+composer install
+
+# 3. Konfigurasi Environment
+cp .env.example .env
+php artisan key:generate
+
+# Konfigurasi Database (Gunakan database khusus project, misal: peta)
+# DB_DATABASE=peta
+
+# 4. Jalankan Migrasi Data Bisnis
+php artisan migrate
+
+# 5. Jalankan API Backend ini di Port 8002
+php artisan serve --port=8002
+```
