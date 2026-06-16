@@ -9,6 +9,14 @@ class ActivityLog extends Model
 {
     use HasFactory;
 
+    protected static function booted()
+    {
+        static::created(function ($log) {
+            $log->load('user'); // Ensure user is loaded for the view
+            event(new \App\Events\NewActivityLogged($log->community_id, $log));
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'community_id',

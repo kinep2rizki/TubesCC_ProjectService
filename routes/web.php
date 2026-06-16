@@ -63,3 +63,14 @@ Route::group(['middleware' => ['auth']], function () {
     Route::put('/settings/profile', [ProfileController::class, 'update'])->name('settings.update');
 
 });
+
+Route::get('/broadcast-test', function () {
+    $log = \App\Models\ActivityLog::create([
+        'user_id' => 1,
+        'community_id' => session('active_community_id', 1),
+        'action' => 'test_broadcast',
+        'description' => 'Tested the WebSockets broadcast at ' . now()->toDateTimeString(),
+        'ip_address' => request()->ip(),
+    ]);
+    return 'Broadcasted! check logs.';
+});

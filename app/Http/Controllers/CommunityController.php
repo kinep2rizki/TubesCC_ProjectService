@@ -71,7 +71,14 @@ class CommunityController extends Controller
     public function updateRoles(Request $request, $id)
     {
         // Logic to update community roles from the Role Builder Modal
-        return back()->with('success', 'Member added successfully');
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'community_id' => $id,
+            'action' => 'updated_roles',
+            'description' => "updated member roles",
+            'ip_address' => request()->ip(),
+        ]);
+        return back()->with('success', 'Member added/roles updated successfully');
     }
 
     public function update(\Illuminate\Http\Request $request, $id)

@@ -192,7 +192,15 @@ class EventController extends Controller
             abort(403, 'Unauthorized to create events for this community.');
         }
 
-        Event::create($validated);
+        $event = Event::create($validated);
+
+        \App\Models\ActivityLog::create([
+            'user_id' => auth()->id(),
+            'community_id' => $validated['community_id'],
+            'action' => 'created_event',
+            'description' => "created a new event '{$event->title}'",
+            'ip_address' => request()->ip(),
+        ]);
 
         return back()->with('success', 'Event created successfully.');
     }

@@ -325,6 +325,50 @@
                 }
             });
         }
+
+        // Listen for Real-Time Activity Logs using Laravel Echo
+        const activeCommunityId = '{{ $activeCommunity->id ?? null }}';
+        if (activeCommunityId && window.Echo) {
+            window.Echo.channel(`community.${activeCommunityId}.activities`)
+                .listen('NewActivityLogged', (e) => {
+                    const activityList = document.querySelector('.relative.pl-sm.mt-sm.flex-1 > .flex.flex-col.gap-md');
+                    if (activityList) {
+                        // Create the new log element
+                        const userName = e.log.user ? e.log.user.name : 'System';
+                        const newElement = document.createElement('div');
+                        newElement.className = 'relative pl-lg animate-fade-in-down'; // You can add a simple CSS animation class
+                        newElement.innerHTML = `
+                            <div class="absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(173,198,255,0.6)] z-10 border-2 border-surface-container"></div>
+                            <p class="text-xs text-outline mb-0.5 font-mono-code">Just now</p>
+                            <p class="text-sm text-on-surface">
+                                <span class="font-bold">${userName}</span>
+                                ${e.log.description}
+                            </p>
+                        `;
+
+                        // Make the previously first item gray
+                        const firstItem = activityList.firstElementChild;
+                        if (firstItem && firstItem.querySelector('.bg-primary')) {
+                            const dot = firstItem.querySelector('.bg-primary');
+                            dot.classList.remove('bg-primary', 'shadow-[0_0_8px_rgba(173,198,255,0.6)]');
+                            dot.classList.add('bg-outline-variant');
+                        }
+
+                        // Remove "No recent activities found" if it exists
+                        if (firstItem && firstItem.textContent.includes('No recent activities')) {
+                            firstItem.remove();
+                        }
+
+                        // Prepend
+                        activityList.insertBefore(newElement, activityList.firstChild);
+
+                        // Optional: Keep only last 10 items to prevent DOM bloating
+                        if (activityList.children.length > 10) {
+                            activityList.lastElementChild.remove();
+                        }
+                    }
+                });
+        }
     });
 </script>
 @endpush

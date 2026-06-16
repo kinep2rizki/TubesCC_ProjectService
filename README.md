@@ -1,59 +1,64 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Tugas Besar CC - Project Service
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Repositori ini adalah layanan utama (**Project Service**) dari aplikasi PETA yang telah dimigrasi menjadi arsitektur Microservices.
+Layanan ini bertanggung jawab khusus untuk **Manajemen Komunitas, Event, Partisipasi, Attendance, dan Sertifikat**.
 
-## About Laravel
+> [!WARNING]
+> Layanan ini **tidak lagi memiliki fitur Autentikasi** secara internal. Fitur *Login*, *Register*, dan manajemen profil User telah dipindahkan sepenuhnya ke **Auth Service** (`TubesCC_BackendJWT`).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Walkthrough Instalasi & Konfigurasi
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+1. **Clone & Install Dependencies**
+   ```bash
+   git clone https://github.com/kinep2rizki/TubesCC_ProjectService.git
+   cd TubesCC_ProjectService
+   composer install
+   ```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+2. **Setup Environment**
+   - Salin file `.env.example` ke `.env`.
+   - Pastikan konfigurasi Database menunjuk ke `peta`.
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=127.0.0.1
+   DB_PORT=5432
+   DB_DATABASE=peta
+   DB_USERNAME=postgres
+   DB_PASSWORD=kinep2004
+   ```
 
-## Learning Laravel
+3. **Jalankan Migrasi**
+   Pastikan Anda sudah membuat database `peta` di PostgreSQL, lalu jalankan:
+   ```bash
+   php artisan migrate
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+4. **Jalankan Layanan (Port 8000)**
+   Jalankan Project Service di Port 8000:
+   ```bash
+   php artisan serve
+   ```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 🤖 AI Context: Catatan Penting untuk Pengembangan Selanjutnya
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Bagi AI atau developer yang membaca file ini di masa mendatang, berikut adalah konteks penuh terkait pemisahan sistem ini menjadi Microservices:
 
-### Premium Partners
+### 📌 Perubahan yang Telah Terjadi
+1. **Pemisahan Auth**: Seluruh fitur login, register, token, dan autentikasi telah dipindahkan ke layanan `TubesCC_BackendJWT`.
+2. **Penghapusan Model User**: Model `User.php` dan tabel migrasi `users`, `personal_access_tokens`, serta manajemen peran dari `spatie/laravel-permission` telah **dihapus sepenuhnya** dari layanan ini.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 🚧 Hal-Hal yang Belum Diimplementasikan (TODO)
+Karena hilangnya Model User, beberapa endpoint mungkin mengalami error (rusak) pada versi ini karena `$item->user` tidak lagi me-return *Relationship Object*. Tugas-tugas berikut ini harus diselesaikan di tahap pengembangan selanjutnya:
 
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. **Validasi Token (Middleware)**: 
+   - Anda perlu membuat Custom Middleware (misal `CheckJwtToken`) yang menangkap header `Authorization: Bearer <token>` dari Frontend, dan melakukan verifikasi manual (baik via *Token Signature Verification* maupun memanggil introspeksi token ke Auth Service).
+2. **Sistem Sinkronisasi/Stitching Data**:
+   - Jika endpoint membutuhkan data spesifik milik pengguna (misal: Menampilkan daftar partisipan dengan namanya), maka *Project Service* hanya memiliki `user_id` saja.
+   - Hal ini bisa diselesaikan dengan *Data Stitching* via Frontend (Frontend memanggil Auth Service untuk resolusi ID ke nama), atau
+   - *Data Stitching* via Guzzle HTTP di dalam Controller Project Service (Project Service meminta data pengguna ke `http://127.0.0.1:8001/api/auth/users/batch`).
+3. **Pengecekan Role & Permission**:
+   - Saat ini *Spatie Role* ada di Auth Service. Untuk menentukan apakah pengguna (dengan ID `X`) adalah Admin di Komunitas `Y`, sistem harus mengandalkan mekanisme Cross-Service untuk memvalidasi Role.
+4. **Event Broadcasting (Reverb)**:
+   - Manajemen Realtime masih terpasang, namun *Private Channel* yang membutuhkan autentikasi pengguna (`Broadcast::routes()`) perlu disesuaikan agar bisa mengautentikasi klien berdasar JWT dari Auth Service.
