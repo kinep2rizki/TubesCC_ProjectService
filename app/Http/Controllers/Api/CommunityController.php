@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Community;
+use App\Models\CommunityMessage;
 use App\Services\UserService;
 use App\Traits\CommunityAuthorization;
 
@@ -106,7 +107,29 @@ class CommunityController extends Controller
     public function feed($id)
     {
         $community = Community::findOrFail($id);
-        return response()->json(['success' => true, 'data' => []], 200);
+        
+        $messages = CommunityMessage::where('community_id', $id)
+            ->orderBy('created_at', 'asc')
+            ->take(50)
+            ->get();
+            
+        // Fetch user details for the messages
+        $userIds = $messages->pluck('user_id')->unique()->toArray();
+        $usersData = UserService::getUsersBatch($userIds);
+        
+        // Also fetch user roles in this community
+        $memberships = \App\Models\CommunityMember::where('community_id', $id)
+            ->whereIn('user_id', $userIds)
+            ->get()
+            ->keyBy('user_id');
+
+        $messages->transform(function ($message) use ($usersData, $memberships) {
+            $message->user_detail = collect($usersData[$message->user_id] ?? [])->only(['id', 'name', 'email', 'roles']);
+            $message->role = $memberships[$message->user_id]->role ?? 'Member';
+            return $message;
+        });
+
+        return response()->json(['success' => true, 'data' => $messages], 200);
     }
 
     public function storeFeed(Request $request, $id)
@@ -114,15 +137,24 @@ class CommunityController extends Controller
         $request->validate(['content' => 'required|string']);
         $community = Community::findOrFail($id);
         
-        $feedData = [
-            'content' => $request->content,
+        $message = CommunityMessage::create([
+            'community_id' => $id,
             'user_id' => $request->auth_user_id,
-            'created_at' => now()->toIso8601String()
-        ];
+            'content' => $request->content
+        ]);
         
-        broadcast(new \App\Events\NewCommunityFeed($id, $feedData));
+        // Fetch user details to broadcast with the message
+        $usersData = UserService::getUsersBatch([$request->auth_user_id]);
+        $membership = \App\Models\CommunityMember::where('community_id', $id)
+            ->where('user_id', $request->auth_user_id)
+            ->first();
+            
+        $message->user_detail = collect($usersData[$request->auth_user_id] ?? [])->only(['id', 'name', 'email', 'roles']);
+        $message->role = $membership->role ?? 'Member';
         
-        return response()->json(['success' => true, 'message' => 'Feed posted successfully'], 201);
+        broadcast(new \App\Events\NewCommunityFeed($id, $message->toArray()));
+        
+        return response()->json(['success' => true, 'message' => 'Message posted successfully', 'data' => $message], 201);
     }
 
     public function updateRoles(Request $request, $id)
