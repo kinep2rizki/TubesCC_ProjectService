@@ -14,12 +14,18 @@ class CommunityController extends Controller
 
     public function index(Request $request)
     {
-        // Get user communities where they are a member
         $userId = $request->auth_user_id;
-        
-        $communities = Community::whereHas('members', function($q) use ($userId) {
-            $q->where('user_id', $userId);
-        })->with('members')->paginate(15);
+        $globalRoles = $request->auth_user_roles ?? [];
+
+        if (in_array('Super Admin', $globalRoles)) {
+            // Super Admin sees all communities
+            $communities = Community::with('members')->paginate(15);
+        } else {
+            // Get user communities where they are a member
+            $communities = Community::whereHas('members', function($q) use ($userId) {
+                $q->where('user_id', $userId);
+            })->with('members')->paginate(15);
+        }
 
         // Data Stitching: Fetch all owners
         $ownerIds = $communities->pluck('owner_id')->unique()->toArray();
@@ -33,6 +39,19 @@ class CommunityController extends Controller
         return response()->json([
             'success' => true,
             'data' => $communities
+        ], 200);
+    }
+
+    public function myMemberships(Request $request)
+    {
+        $userId = $request->auth_user_id;
+        $memberships = \App\Models\CommunityMember::where('user_id', $userId)
+            ->with('community')
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $memberships
         ], 200);
     }
 

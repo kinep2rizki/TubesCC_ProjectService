@@ -34,6 +34,19 @@ class ParticipantController extends Controller
             }
         }
 
+        if ($request->boolean('all')) {
+            $participants = $query->get();
+            $userIds = $participants->pluck('user_id')->unique()->toArray();
+            $usersData = UserService::getUsersBatch($userIds);
+
+            $participants->transform(function ($participant) use ($usersData) {
+                $participant->user_detail = $usersData[$participant->user_id] ?? null;
+                return $participant;
+            });
+
+            return response()->json(['success' => true, 'data' => $participants], 200);
+        }
+
         $participants = $query->paginate(15);
         
         // Data Stitching
@@ -52,7 +65,11 @@ class ParticipantController extends Controller
     {
         $event = Event::findOrFail($eventId);
 
-        if ($request->filled('email') && $request->filled('name')) {
+        if ($request->filled('user_id')) {
+            $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
+            $userId = $request->user_id;
+            $status = $request->input('status', 'Registered');
+        } elseif ($request->filled('email') && $request->filled('name')) {
             // Manual Add by Admin
             $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
             
@@ -105,8 +122,41 @@ class ParticipantController extends Controller
     public function export($eventId)
     {
         $event = Event::findOrFail($eventId);
-        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Moderator']);
 
-        return response()->json(['success' => true, 'message' => 'Export initiated'], 200);
+        $participants = EventParticipant::where('event_id', $eventId)->get();
+        $userIds = $participants->pluck('user_id')->unique()->toArray();
+        $usersData = UserService::getUsersBatch($userIds);
+
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=participants_{$eventId}.csv",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['Ticket Number', 'Name', 'Email', 'Status', 'Registration Date'];
+
+        $callback = function() use($participants, $columns, $usersData) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($participants as $p) {
+                $user = $usersData[$p->user_id] ?? [];
+                $row = [
+                    $p->ticket_number,
+                    $user['name'] ?? 'Unknown',
+                    $user['email'] ?? 'Unknown',
+                    $p->status,
+                    $p->created_at->format('Y-m-d H:i:s')
+                ];
+                fputcsv($file, $row);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

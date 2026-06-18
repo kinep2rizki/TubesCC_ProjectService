@@ -18,6 +18,7 @@ Route::group(['middleware' => ['throttle:60,1', 'jwt'], 'as' => 'api.'], functio
     // Communities
     Route::get('/communities', [CommunityController::class, 'index']);
     Route::post('/communities', [CommunityController::class, 'store']);
+    Route::get('/communities/my-memberships', [CommunityController::class, 'myMemberships']);
     Route::get('/communities/all', [CommunityController::class, 'getAll']);
     Route::get('/communities/{id}/feed', [CommunityController::class, 'feed']);
     Route::post('/communities/{id}/feed', [CommunityController::class, 'storeFeed']);
@@ -42,6 +43,7 @@ Route::group(['middleware' => ['throttle:60,1', 'jwt'], 'as' => 'api.'], functio
 
     // Analytics
     Route::get('/analytics/{communityId}/dashboard', [AnalyticsController::class, 'dashboard']);
+    Route::get('/analytics/{communityId}/advanced', [AnalyticsController::class, 'advanced']);
     Route::post('/analytics/{communityId}/export', [AnalyticsController::class, 'export']);
 
     // Certificates (Admin Only)

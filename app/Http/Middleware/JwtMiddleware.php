@@ -17,8 +17,8 @@ class JwtMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        // Ambil token dari header Authorization: Bearer <token>
-        $token = $request->bearerToken();
+        // Ambil token dari header Authorization: Bearer <token> atau dari query parameter ?token=
+        $token = $request->bearerToken() ?? $request->query('token');
 
         if (!$token) {
             return response()->json(['success' => false, 'message' => 'Authorization Token not found'], 401);
@@ -33,18 +33,19 @@ class JwtMiddleware
 
             if ($response->successful()) {
                 $userData = $response->json();
+                $roles = isset($userData['roles']) ? array_column($userData['roles'], 'name') : ['User'];
                 
                 // Simpan user_id ke dalam request agar bisa digunakan oleh Controller
                 $request->merge([
                     'auth_user_id' => $userData['id'] ?? null,
-                    'auth_user_roles' => $userData['roles'] ?? ['User'], // Menyimpan Global Roles dari Spatie
+                    'auth_user_roles' => $roles, // Menyimpan Global Roles dari Spatie
                 ]);
 
                 // Set user resolver for Laravel Broadcasting/Echo compatibility
-                $request->setUserResolver(function () use ($userData) {
+                $request->setUserResolver(function () use ($userData, $roles) {
                     return new \Illuminate\Auth\GenericUser([
                         'id' => $userData['id'] ?? null,
-                        'roles' => $userData['roles'] ?? ['User'],
+                        'roles' => $roles,
                         'name' => $userData['name'] ?? null,
                     ]);
                 });

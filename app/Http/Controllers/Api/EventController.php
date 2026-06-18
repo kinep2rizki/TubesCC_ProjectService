@@ -45,11 +45,11 @@ class EventController extends Controller
             'community_id' => 'required|exists:communities,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'location' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        $this->authorizeCommunityAccess($validated['community_id'], ['Owner']);
+        $this->authorizeCommunityAccess($validated['community_id'], ['Owner', 'Admin', 'Moderator']);
 
         $validated['status'] = 'Ongoing';
 
@@ -118,14 +118,7 @@ class EventController extends Controller
         $userIds = $recentParticipants->pluck('user_id')->unique()->toArray();
         if (!empty($userIds)) {
             $userService = new UserService();
-            $usersResponse = $userService->getUsersBatch($userIds);
-            $usersMap = [];
-            
-            if ($usersResponse['success'] ?? false) {
-                foreach ($usersResponse['data'] as $u) {
-                    $usersMap[$u['id']] = $u;
-                }
-            }
+            $usersMap = $userService->getUsersBatch($userIds);
 
             $recentParticipants->transform(function ($participant) use ($usersMap) {
                 $participant->user = $usersMap[$participant->user_id] ?? ['name' => 'Unknown User', 'email' => 'N/A'];
@@ -135,6 +128,7 @@ class EventController extends Controller
 
         // Bundle everything into the response
         $event->stats = [
+            'participants' => $totalParticipants,
             'registered' => $registeredCount,
             'attended' => $attendedCount,
             'waitlisted' => $waitlistedCount,
@@ -164,7 +158,7 @@ class EventController extends Controller
     {
         $event = Event::findOrFail($id);
         
-        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Admin', 'Moderator']);
 
         $validated = $request->validate([
             'title' => 'string|max:255',
@@ -188,7 +182,7 @@ class EventController extends Controller
     {
         $event = Event::findOrFail($id);
         
-        $this->authorizeCommunityAccess($event->community_id, ['Owner']);
+        $this->authorizeCommunityAccess($event->community_id, ['Owner', 'Admin', 'Moderator']);
 
         $event->delete();
         
